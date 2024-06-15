@@ -98,13 +98,13 @@ class BackupManagement(models.Model):
             executed_at = datetime.strptime(str(new_time), '%Y-%m-%d %H:%M:%S')
 
             cron_id = uuid.uuid4()
-            print(b.conflict_behavior, "self.conflict_behavior")
             domain = {
                 "total_size": res,
                 "total_files": len(attachments),
                 "executed_at": executed_at,
                 "status": const.RUNNING_STATUS,
                 "cron_id": cron_id,
+                "total_success":0,
             }
             b.update_backup_management(b.env, b.id, domain)
             b.add_cron(executed_at, attachments, b.id, str(cron_id), b.conflict_behavior)
@@ -139,7 +139,6 @@ class BackupManagement(models.Model):
     def action_cancel_cron(self):
         try:
             for i in self:
-                print(i.cron_id, "i.cron_id")
                 if i.scheduler.get_job(i.cron_id) is not None:
                     i.scheduler.remove_job(i.cron_id)
                 i.status = const.CANCELED_STATUS
@@ -214,7 +213,7 @@ class BackupManagement(models.Model):
                         executor.submit(self.handle_request_sharepoint, path_gen, attachment['store_fname'],
                                         attachment["name"], attachment["mimetype"], attachment["create_date"],
                                         attachment["res_model"], upload_url, host_name, client_key, client_secret,
-                                        tenant_id, scope, behavior, attachment["id"], new_env, backup_id))
+                                        tenant_id, scope, behavior, attachment["id"], new_env, backup_id, attachment["db_datas"]))
             for process in as_completed(processes):
                 result = process.result()
                 if result:
@@ -246,15 +245,17 @@ class BackupManagement(models.Model):
 
     def handle_request_sharepoint(self, path_gen: str, store_fname: str, name: str, mimetype, create_date: datetime,
                                   res_model: str, upload_url, host_name, client_key, client_secret, tenant_id, scope,
-                                  behavior, attachment_id: int, new_env, backup_id):
+                                  behavior, attachment_id: int, new_env, backup_id: str, db_datas):
         try:
-            file_path = os.path.join(path_gen, store_fname)
+            file_path = None
+            if store_fname:
+                file_path = os.path.join(path_gen, store_fname)
             extension = mimetypes.guess_extension(mimetype)
+
             year = utils.get_year(str(create_date))
             path_upload = f"{upload_url}/{host_name}/{res_model}/{year}/{name}{extension}"
-            print(path_upload, "url_upload")
             sharepoint_res = SharePoint().upload_file_to_sharepoint(path_upload, file_path, client_key,
-                                                                    client_secret, tenant_id, scope, behavior)
+                                                                    client_secret, tenant_id, scope, behavior, db_datas)
             if sharepoint_res.status_code == http.HTTPStatus.OK or sharepoint_res.status_code == http.HTTPStatus.CREATED:
                 json_data = sharepoint_res.json()
                 web_url = json_data["webUrl"]
