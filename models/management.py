@@ -197,7 +197,7 @@ class BackupManagement(models.Model):
         new_cr = self.pool.cursor()
         start_time = datetime.now()
         try:
-            new_env = self.env(cr=new_cr)
+            new_env = self.sudo().env(cr=new_cr)
             sys_params, host_name, client_key, client_secret, tenant_id, site_url, upload_url, scope = self.get_system_params(
                 new_env)
             update_att = {"status": const.RUNNING_STATUS}
