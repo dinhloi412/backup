@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access.backup.management,access.backup.management,backup.model_backup_management,base.group_user,1,1,1,1
+access_log_backup,access.log.backup,backup.model_log_backup,base.group_user,1,1,1,1

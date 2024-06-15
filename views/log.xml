@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="log_back_up_view_tree" model="ir.ui.view">
+            <field name="name">log.back.up.view.tree</field>
+            <field name="model">log.backup</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="status_code"/>
+                    <field name="message"/>
+                    <field name="create_date"/>
+
+                </tree>
+            </field>
+        </record>
+    </data>
+</odoo>

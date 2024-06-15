@@ -1,0 +1,7 @@
+<templates xml:space="preserve">
+    <t t-name="backup.BackupManagement" owl="1">
+        <div>
+            <h2>Hello world</h2>
+        </div>
+    </t>
+</templates>

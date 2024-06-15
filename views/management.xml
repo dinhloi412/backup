@@ -1,0 +1,119 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_backup_management_tree" model="ir.ui.view">
+        <field name="name">backup.management.tree</field>
+        <field name="model">backup.management</field>
+        <field name="arch" type="xml">
+            <tree
+                    decoration-success="status == 'done'"
+                    decoration-info="status =='created'"
+                    decoration-danger="status=='failed'"
+                    decoration-muted="status=='running'"
+                    decoration-warning="status=='cancelled'"
+            >
+                <header>
+                    <button name="action_migrate" string="Migrate" type="object" class="btn btn-warning"/>
+                     <button name="action_cancel_cron" string="Cancel Backup" class="btn btn-danger"
+                            type="object"/>
+                </header>
+                <field name="name"/>
+                <field name="installed_models"/>
+                <field name="from_year"/>
+                <field name="to_year"/>
+                <field name="is_scheduled"/>
+                <field name="executed_at"/>
+                <field name="total_size"/>
+                <field name="total_files"/>
+                <field name="total_success"/>
+                <field name="total_time"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'done'"
+                       decoration-info="status =='created'"
+                       decoration-danger="status=='failed'"
+                       decoration-muted="status=='running'"
+                       decoration-warning="status=='cancelled'"
+                />
+            </tree>
+        </field>
+    </record>
+    <record id="view_backup_management_form" model="ir.ui.view">
+        <field name="name">backup.management.form</field>
+        <field name="model">backup.management</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="status" widget="statusbar" nolabel="1"
+                           statusbar_visible="created,running,done,failed,cancelled"/>
+                    <button name="action_cancel_cron" string="Cancel Backup" class="oe_highlight"
+                            confirm="Cancel this item?"
+                            attrs="{'invisible': ['&amp;',('status', '!=', 'created'),('status', '!=', 'running')]}"
+                            type="object"/>
+                    <button name="action_migrate" string="Migrate" type="object" class="btn btn-primary"/>
+                    <button name="open_log_wizard" string="Open log" type="object" class="btn btn-secondary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" attrs="{'readonly': [('id', '!=', False)]}"/>
+                            <field name="is_scheduled" widget="boolean_toggle" attrs="{'readonly': [('id', '!=', False)]}"/>
+                            <field name="installed_models" attrs="{'readonly': [('id', '!=', False)]}"/>
+                            <field name="conflict_behavior"/>
+                        </group>
+                        <group>
+                            <field name="file" filename="file_name"/>
+                            <field name="file"/>
+                            <field name="from_year" placehoder="year" attrs="{'readonly': [('id', '!=', False)]}"/>
+                            <field name="to_year" attrs="{'readonly': [('id', '!=', False)]}"/>
+                            <field name="executed_at"
+                                   attrs="{'invisible': [('is_scheduled', '=', False)], 'readonly': [('id', '!=', False)]}"/>
+
+                        </group>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" groups="base.group_user"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+    <record id="action_backup_management" model="ir.actions.act_window">
+        <field name="name">Backup Management</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">backup.management</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_filter_male':1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                create your first backup
+            </p>
+        </field>
+    </record>
+    <record id="view_backup_management_search" model="ir.ui.view">
+        <field name="name">backup.management.search</field>
+        <field name="model">backup.management</field>
+        <field name="arch" type="xml">
+            <search string="Backup">
+                <field name="name" string="name"/>
+                <group expand="1" string="Group by">
+                    <filter string="Scheduled" name="is_scheduled" context="{'group_by': 'is_scheduled'}"/>
+                </group>
+                <searchpanel>
+                    <field name="status" string="Status" enable_counter="1"/>
+                </searchpanel>
+            </search>
+        </field>
+    </record>
+    <record id="action_backup_management_js" model="ir.actions.client">
+        <field name="name">Backup Management JS</field>
+        <field name="tag">backup.backup_management_js</field>
+    </record>
+
+    <menuitem
+            id="menu_backup_management"
+            name="Backup Management"
+            action="action_backup_management"
+            parent="menu_backup"
+            sequence="0"
+    />
+</odoo>

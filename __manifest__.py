@@ -1,0 +1,21 @@
+{
+    'name': "Backup Management",
+    'version': '1.0.0',
+    'depends': ["base", "mail", "product"],
+    'category': 'Backup',
+    'description': """"Backup management system""""",
+    'sumary': 'Backup management system',
+    'data': [
+        'security/ir.model.access.csv',
+        'views/menu.xml',
+        'views/management.xml',
+        'views/log.xml',
+        'views/res_config_settings_views.xml',
+    ],
+    'application': True,
+    'auto_install': True,
+    'demo': [],
+    'license': 'AGPL-3',
+    'sequence': 1,
+    'author': "loi.nguyen",
+}

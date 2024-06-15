@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <menuitem
+        id="menu_backup_root"
+        name="Backup"
+        sequence="0"
+    />
+    
+    <menuitem
+    id="menu_backup"
+    name="Backup"
+    parent="menu_backup_root"
+    sequence="20"
+/>
+
+
+</odoo>
