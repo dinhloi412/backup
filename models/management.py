@@ -134,7 +134,8 @@ class BackupManagement(models.Model):
             vals["total_files"] = len(attachments)
             size_bytes = 0
             for idx in attachments:
-                size_bytes += idx["file_size"]
+                if idx["file_size"]:
+                    size_bytes += int(idx["file_size"])
             res = utils.convert_bytes_to_gb(size_bytes)
             vals["total_size"] = res
             if vals["executed_at"] != "":
