@@ -19,7 +19,7 @@ def get_year(timestamp: str):
     return res.year
 
 
-def convert_bytes_to_gb(bytes: int):
+def convert_bytes_to_gb(bytes: float):
     gb = bytes / (1024 ** 3)
     return gb
 

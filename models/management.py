@@ -59,16 +59,16 @@ class BackupManagement(models.Model):
         ('rename', 'Rename')
     ], string="Conflict Behavior", required=True, default='rename')
 
-    @api.model
-    def _get_mimetype(self):
-        try:
-            query = """SELECT DISTINCT mimetype FROM ir_attachment"""
-            self.env.cr.execute(query)
-            attrs = self.env.cr.fetchall()
-            return [(attr[0], attr[0]) for attr in attrs]
-        except Exception as e:
-            # Handle exceptions appropriately, e.g., log the error
-            return [('error', str(e))]  # Return placeholder data or handle error gracefully
+    # @api.model
+    # def _get_mimetype(self):
+    #     try:
+    #         query = """SELECT DISTINCT mimetype FROM ir_attachment"""
+    #         self.env.cr.execute(query)
+    #         attrs = self.env.cr.fetchall()
+    #         return [(attr[0], attr[0]) for attr in attrs]
+    #     except Exception as e:
+    #         # Handle exceptions appropriately, e.g., log the error
+    #         return [('error', str(e))]  # Return placeholder data or handle error gracefully
     def _get_models(self):
         installed_modules = self.sudo().env['ir.module.module'].search([('state', '=', 'installed')])
         installed_module_names = list(set(installed_modules.mapped('name')))
@@ -101,7 +101,7 @@ class BackupManagement(models.Model):
             attachments = b.get_attachments(from_date, to_date, b.installed_models)
             size_bytes = 0
             for idx in attachments:
-                size_bytes += idx["file_size"]
+                size_bytes += float(idx["file_size"])
             res = utils.convert_bytes_to_gb(size_bytes)
 
             new_time = datetime.now() + timedelta(seconds=10)
