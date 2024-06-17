@@ -58,10 +58,9 @@
                             <field name="is_scheduled" widget="boolean_toggle" attrs="{'readonly': [('id', '!=', False)]}"/>
                             <field name="installed_models" attrs="{'readonly': [('id', '!=', False)]}"/>
                             <field name="conflict_behavior"/>
+<!--                            <field name="except_data_type"/>-->
                         </group>
                         <group>
-                            <field name="file" filename="file_name"/>
-                            <field name="file"/>
                             <field name="from_year" placehoder="year" attrs="{'readonly': [('id', '!=', False)]}"/>
                             <field name="to_year" attrs="{'readonly': [('id', '!=', False)]}"/>
                             <field name="executed_at"

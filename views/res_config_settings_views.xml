@@ -37,6 +37,10 @@
                                     <span class="o_form_label">Upload Url</span>
                                     <field name="sharepoint_upload_url"/>
                                 </div>
+                                 <div class="row ml32">
+                                    <span class="o_form_label">Max threads</span>
+                                    <field name="sharepoint_threads"/>
+                                </div>
                             </div>
                         </div>
                     </div>

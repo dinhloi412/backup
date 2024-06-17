@@ -5,3 +5,5 @@ DONE_STATUS = "done"
 CANCELED_STATUS = "cancelled"
 MICROSOFT_CONFLICT_BEHAVIOR = "?@microsoft.graph.conflictBehavior="
 MAX_THREADS = 10
+SHAREPOINT_TYPE = "sharepoint"
+DB_TYPE = "database"

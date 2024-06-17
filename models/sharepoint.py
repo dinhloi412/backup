@@ -25,26 +25,30 @@ class SharePoint:
             return None
 
     def upload_file_to_sharepoint(self, path_upload, file_path, client_key: str, client_secret: str, tenant_id: str, scope: str, behavior: str, datas):
-        self.token = self._get_access_token(client_key, client_secret, tenant_id, scope)
-        access_token = self.token
-        conflict_behavior = self.conflict_behavior(behavior)
-        print(path_upload, "path_upload")
-        res_url = f"{path_upload}:/content{conflict_behavior}"
-        # Read the file content
-        file_content = datas
-        if file_path:
-            with open(file_path, 'rb') as file:
-                file_content = file.read()
-        # Set up the headers with the access token
-        headers = {
-            'Authorization': f'Bearer {access_token}',
-            'Content-Type': 'text/plain',
-        }
+        try:
+            self.token = self._get_access_token(client_key, client_secret, tenant_id, scope)
+            access_token = self.token
+            conflict_behavior = self.conflict_behavior(behavior)
+            print(path_upload, "path_upload")
+            res_url = f"{path_upload}:/content{conflict_behavior}"
+            # Read the file content
+            file_content = datas
+            if file_path:
+                with open(file_path, 'rb') as file:
+                    file_content = file.read()
+            # Set up the headers with the access token
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'text/plain',
+            }
 
-        # Make the request to upload the file
-        response = requests.put(res_url, data=file_content, headers=headers)
-        print(response, "response upload")
-        return response
+            # Make the request to upload the file
+            response = requests.put(res_url, data=file_content, headers=headers)
+            print(response, "response upload")
+            return response
+        except Exception as e:
+            return e
+
 
     def conflict_behavior(self, state: str):
         behavior = {
