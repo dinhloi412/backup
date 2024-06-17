@@ -59,7 +59,8 @@ class BackupManagement(models.Model):
         ('replace', "Replace"),
         ('rename', 'Rename')
     ], string="Conflict Behavior", required=True, default='rename')
-    stop_thread = fields.Boolean(store=False)
+    # stop_thread = fields.Boolean(store=False)
+    is_valid = threading.Event()
 
     # @api.model
     # def _get_mimetype(self):
@@ -164,8 +165,7 @@ class BackupManagement(models.Model):
                 if i.scheduler.get_job(i.cron_id) is not None:
                     i.scheduler.remove_job(i.cron_id)
                 i.status = const.CANCELED_STATUS
-                i.stop_thread = True
-            print(self.stop_thread, "self.should_stop")
+            self.is_valid.set()
             return True
         except Exception as e:
             raise UserError(e)
@@ -223,7 +223,6 @@ class BackupManagement(models.Model):
 
     def sharepoint_upload(self, data: list, backup_id: int, behavior: str):
         new_cr = self.pool.cursor()
-        print(new_cr, "new_cr")
         start_time = datetime.now()
         try:
             new_env = self.sudo().env(cr=new_cr)
@@ -239,9 +238,7 @@ class BackupManagement(models.Model):
             self = self.with_env(self.env(cr=new_cr))
             with ThreadPoolExecutor(max_workers=int(threads)) as executor:
                 for attachment in data:
-                    print(self.stop_thread, "self.stop_thread")
-                    if self.stop_thread:
-                        print("cancel threads")
+                    if self.is_valid.is_set():
                         break
                     processes.append(
                         executor.submit(self.handle_request_sharepoint, path_gen, attachment['store_fname'],
@@ -250,16 +247,16 @@ class BackupManagement(models.Model):
                                         tenant_id, scope, behavior, attachment["id"], new_env, backup_id,
                                         attachment["db_datas"]))
             for process in as_completed(processes):
-                if self.stop_thread:
-                    print("cancel111111111111 threads")
+                if self.is_valid.is_set():
                     break
                 result = process.result()
                 if result:
                     total_success += 1
-            total_time = datetime.now() - start_time
-            update_att = {"status": const.DONE_STATUS, "total_success": total_success,
-                          "total_time": utils.convert_time_measure(total_time)}
-            self.update_backup_management(new_env, backup_id, update_att)  # update status -> finished
+            if not self.is_valid.is_set():
+                total_time = datetime.now() - start_time
+                update_att = {"status": const.DONE_STATUS, "total_success": total_success,
+                              "total_time": utils.convert_time_measure(total_time)}
+                self.update_backup_management(new_env, backup_id, update_att)  # update status -> finished
             return
         except Exception as e:
             # new_cr.rollback()
@@ -284,8 +281,7 @@ class BackupManagement(models.Model):
                                   res_model: str, upload_url, host_name, client_key, client_secret, tenant_id, scope,
                                   behavior, attachment_id: int, new_env, backup_id: str, db_datas):
         try:
-            # print("fail gere")
-            if self.stop_thread:
+            if self.is_valid.is_set():
                 return
             file_path = None
             if store_fname:
@@ -297,7 +293,6 @@ class BackupManagement(models.Model):
             sharepoint_res = SharePoint().upload_file_to_sharepoint(path_upload, file_path, client_key,
 
                                                                     client_secret, tenant_id, scope, behavior, db_datas)
-            # is_valid = False
             log_type = const.DB_TYPE
             message = None
             web_url = None
