@@ -101,7 +101,8 @@ class BackupManagement(models.Model):
             attachments = b.get_attachments(from_date, to_date, b.installed_models)
             size_bytes = 0
             for idx in attachments:
-                size_bytes += float(idx["file_size"])
+                if idx["file_size"]:
+                    size_bytes += int(idx["file_size"])
             res = utils.convert_bytes_to_gb(size_bytes)
 
             new_time = datetime.now() + timedelta(seconds=10)
