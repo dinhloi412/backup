@@ -3,6 +3,7 @@ import os
 import mimetypes
 import uuid
 import time
+import threading
 
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -58,6 +59,7 @@ class BackupManagement(models.Model):
         ('replace', "Replace"),
         ('rename', 'Rename')
     ], string="Conflict Behavior", required=True, default='rename')
+    stop_thread = fields.Boolean(store=False)
 
     # @api.model
     # def _get_mimetype(self):
@@ -69,6 +71,10 @@ class BackupManagement(models.Model):
     #     except Exception as e:
     #         # Handle exceptions appropriately, e.g., log the error
     #         return [('error', str(e))]  # Return placeholder data or handle error gracefully
+
+    def get_status_thread(self):
+        return self.stop_thread
+
     def _get_models(self):
         installed_modules = self.sudo().env['ir.module.module'].search([('state', '=', 'installed')])
         installed_module_names = list(set(installed_modules.mapped('name')))
@@ -158,6 +164,8 @@ class BackupManagement(models.Model):
                 if i.scheduler.get_job(i.cron_id) is not None:
                     i.scheduler.remove_job(i.cron_id)
                 i.status = const.CANCELED_STATUS
+                i.stop_thread = True
+            print(self.stop_thread, "self.should_stop")
             return True
         except Exception as e:
             raise UserError(e)
@@ -215,6 +223,7 @@ class BackupManagement(models.Model):
 
     def sharepoint_upload(self, data: list, backup_id: int, behavior: str):
         new_cr = self.pool.cursor()
+        print(new_cr, "new_cr")
         start_time = datetime.now()
         try:
             new_env = self.sudo().env(cr=new_cr)
@@ -227,9 +236,13 @@ class BackupManagement(models.Model):
             # url_test2 = "https://graph.microsoft.com/v1.0/drives/b!IJWKFS9o9ESgbLk8b6sLTph4xN05W3RPuyn_G18c2-igsr8sgTbnQrBcjG-DqtVC/root:/TestFolder"
             path_gen = os.path.join(DATA_DIR, "filestore", db_name)
             total_success = 0
-            print(threads, "threads")
+            self = self.with_env(self.env(cr=new_cr))
             with ThreadPoolExecutor(max_workers=int(threads)) as executor:
                 for attachment in data:
+                    print(self.stop_thread, "self.stop_thread")
+                    if self.stop_thread:
+                        print("cancel threads")
+                        break
                     processes.append(
                         executor.submit(self.handle_request_sharepoint, path_gen, attachment['store_fname'],
                                         attachment["name"], attachment["mimetype"], attachment["create_date"],
@@ -237,6 +250,9 @@ class BackupManagement(models.Model):
                                         tenant_id, scope, behavior, attachment["id"], new_env, backup_id,
                                         attachment["db_datas"]))
             for process in as_completed(processes):
+                if self.stop_thread:
+                    print("cancel111111111111 threads")
+                    break
                 result = process.result()
                 if result:
                     total_success += 1
@@ -268,6 +284,9 @@ class BackupManagement(models.Model):
                                   res_model: str, upload_url, host_name, client_key, client_secret, tenant_id, scope,
                                   behavior, attachment_id: int, new_env, backup_id: str, db_datas):
         try:
+            # print("fail gere")
+            if self.stop_thread:
+                return
             file_path = None
             if store_fname:
                 file_path = os.path.join(path_gen, store_fname)
@@ -319,4 +338,3 @@ class BackupManagement(models.Model):
             'view_id': self.env.ref("backup.log_back_up_view_tree", False).id,
             'target': 'new'
         }
-
