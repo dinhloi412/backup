@@ -5,33 +5,34 @@
         <field name="model">backup.management</field>
         <field name="arch" type="xml">
             <tree
+                decoration-success="status == 'done'"
+                decoration-info="status =='created'"
+                decoration-danger="status=='failed'"
+                decoration-muted="status=='running'"
+                decoration-warning="status=='cancelled'"
+            >
+                <header>
+                    <button name="action_migrate" string="Migrate" type="object"
+                        class="btn btn-warning" />
+                    <button name="action_cancel_cron" string="Cancel Backup" class="btn btn-danger"
+                        type="object" />
+                </header>
+                <field name="name" />
+                <!--                <field name="model_ids"/>-->
+                <field name="from_year" />
+                <field name="to_year" />
+                <field name="is_scheduled" />
+                <field name="executed_at" />
+                <field name="total_size" />
+                <field name="total_files" />
+                <field name="total_success" />
+                <field name="total_time" />
+                <field name="status" widget="badge"
                     decoration-success="status == 'done'"
                     decoration-info="status =='created'"
                     decoration-danger="status=='failed'"
                     decoration-muted="status=='running'"
                     decoration-warning="status=='cancelled'"
-            >
-                <header>
-                    <button name="action_migrate" string="Migrate" type="object" class="btn btn-warning"/>
-                    <button name="action_cancel_cron" string="Cancel Backup" class="btn btn-danger"
-                            type="object"/>
-                </header>
-                <field name="name"/>
-                <field name="installed_models"/>
-                <field name="from_year"/>
-                <field name="to_year"/>
-                <field name="is_scheduled"/>
-                <field name="executed_at"/>
-                <field name="total_size"/>
-                <field name="total_files"/>
-                <field name="total_success"/>
-                <field name="total_time"/>
-                <field name="status" widget="badge"
-                       decoration-success="status == 'done'"
-                       decoration-info="status =='created'"
-                       decoration-danger="status=='failed'"
-                       decoration-muted="status=='running'"
-                       decoration-warning="status=='cancelled'"
                 />
             </tree>
         </field>
@@ -43,36 +44,40 @@
             <form>
                 <header>
                     <field name="status" widget="statusbar" nolabel="1"
-                           statusbar_visible="created,running,done,failed,cancelled"/>
+                        statusbar_visible="created,running,done,failed,cancelled" />
                     <button name="action_cancel_cron" string="Cancel Backup" class="oe_highlight"
-                            confirm="Cancel this item?"
-                            attrs="{'invisible': ['&amp;',('status', '!=', 'created'),('status', '!=', 'running')]}"
-                            type="object"/>
-                    <button name="action_migrate" string="Migrate" type="object" class="btn btn-primary"/>
-                    <button name="open_log_wizard" string="Open log" type="object" class="btn btn-secondary"/>
+                        confirm="Cancel this item?"
+                        attrs="{'invisible': ['&amp;',('status', '!=', 'created'),('status', '!=', 'running')]}"
+                        type="object" />
+                    <button name="action_migrate" string="Migrate" type="object"
+                        class="btn btn-primary" />
+                    <button name="open_log_wizard" string="Open log" type="object"
+                        class="btn btn-secondary" />
                 </header>
                 <sheet>
                     <group>
                         <group>
-                            <field name="name" attrs="{'readonly': [('id', '!=', False)]}"/>
-                            <field name="installed_models" attrs="{'readonly': [('id', '!=', False)]}"/>
+                            <field name="name" attrs="{'readonly': [('id', '!=', False)]}" />
+                            <field name="model_ids" attrs="{'readonly': [('id', '!=', False)]}"
+                                widget="many2many_tags" />
                             <field name="is_scheduled" widget="boolean_toggle"
-                                   attrs="{'readonly': [('id', '!=', False)]}"/>
+                                attrs="{'readonly': [('id', '!=', False)]}" />
                             <field name="executed_at"
-                                   attrs="{'invisible': [('is_scheduled', '=', False)], 'readonly': [('id', '!=', False)]}"/>
+                                attrs="{'invisible': [('is_scheduled', '=', False)], 'readonly': [('id', '!=', False)]}" />
 
                             <!--                            <field name="except_data_type"/>-->
                         </group>
                         <group>
-                            <field name="from_year" placehoder="year" attrs="{'readonly': [('id', '!=', False)]}"/>
-                            <field name="to_year" attrs="{'readonly': [('id', '!=', False)]}"/>
-                            <field name="conflict_behavior"/>
+                            <field name="from_year" placehoder="year"
+                                attrs="{'readonly': [('id', '!=', False)]}" />
+                            <field name="to_year" attrs="{'readonly': [('id', '!=', False)]}" />
+                            <field name="conflict_behavior" />
                         </group>
                     </group>
                 </sheet>
                 <div class="oe_chatter">
-                    <field name="message_follower_ids" groups="base.group_user"/>
-                    <field name="message_ids"/>
+                    <field name="message_follower_ids" groups="base.group_user" />
+                    <field name="message_ids" />
                 </div>
             </form>
         </field>
@@ -94,12 +99,13 @@
         <field name="model">backup.management</field>
         <field name="arch" type="xml">
             <search string="Backup">
-                <field name="name" string="name"/>
+                <field name="name" string="name" />
                 <group expand="1" string="Group by">
-                    <filter string="Scheduled" name="is_scheduled" context="{'group_by': 'is_scheduled'}"/>
+                    <filter string="Scheduled" name="is_scheduled"
+                        context="{'group_by': 'is_scheduled'}" />
                 </group>
                 <searchpanel>
-                    <field name="status" string="Status" enable_counter="1"/>
+                    <field name="status" string="Status" enable_counter="1" />
                 </searchpanel>
             </search>
         </field>
@@ -110,10 +116,10 @@
     </record>
 
     <menuitem
-            id="menu_backup_management"
-            name="Backup Management"
-            action="action_backup_management"
-            parent="menu_backup"
-            sequence="0"
+        id="menu_backup_management"
+        name="Backup Management"
+        action="action_backup_management"
+        parent="menu_backup"
+        sequence="0"
     />
 </odoo>

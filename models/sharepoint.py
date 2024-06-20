@@ -24,13 +24,12 @@ class SharePoint:
             print(f"Failed to get access token. Status code: {response.status_code}")
             return None
 
-    def upload_file_to_sharepoint(self, path_upload, file_path, client_key: str, client_secret: str, tenant_id: str, scope: str, behavior: str, datas):
+    def upload_file_to_sharepoint(self, upload_path, file_path, client_key: str, client_secret: str, tenant_id: str, scope: str, behavior: str, datas):
         try:
             self.token = self._get_access_token(client_key, client_secret, tenant_id, scope)
-            access_token = self.token
             conflict_behavior = self.conflict_behavior(behavior)
-            print(path_upload, "path_upload")
-            res_url = f"{path_upload}:/content{conflict_behavior}"
+            print(upload_path, "path_upload")
+            res_url = f"{upload_path}:/content{conflict_behavior}"
             # Read the file content
             file_content = datas
             if file_path:
@@ -38,7 +37,7 @@ class SharePoint:
                     file_content = file.read()
             # Set up the headers with the access token
             headers = {
-                'Authorization': f'Bearer {access_token}',
+                'Authorization': f'Bearer {self.token}',
                 'Content-Type': 'text/plain',
             }
 
@@ -49,6 +48,23 @@ class SharePoint:
         except Exception as e:
             return e
 
+    def remove_file_sharepoint(self, sharepoint_id: str, delete_url,client_key, client_secret, tenant_id, scope):
+        try:
+            test_url = "https://graph.microsoft.com/v1.0/drives/b!IJWKFS9o9ESgbLk8b6sLTph4xN05W3RPuyn_G18c2-igsr8sgTbnQrBcjG-DqtVC"
+            res_url = f"{test_url}/items/{sharepoint_id}"
+            print(res_url, "res_url")
+            self.token = self._get_access_token(client_key, client_secret, tenant_id, scope)
+            headers = {
+                'Authorization': f'Bearer {self.token}',
+                'Content-Type': 'text/plain',
+            }
+            # Make the request to delete the file
+            response = requests.delete(url = res_url, headers=headers)
+            print(response, "nnnnnnnnnnnnnnnnnnnnnn")
+            print(response.json(), "response")
+            return response
+        except Exception as e:
+            return e
 
     def conflict_behavior(self, state: str):
         behavior = {
@@ -58,3 +74,4 @@ class SharePoint:
         }
         return behavior.get(state, "invalid")
 
+     

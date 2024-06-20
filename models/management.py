@@ -21,10 +21,38 @@ from . import log
 DATA_DIR = odoo.tools.config["data_dir"]
 
 
+class IrAttachment(models.Model):
+    _inherit = "ir.attachment"
+    url = fields.Char('url', index=True, size=2048)
+    sharepoint_id = fields.Char('sharepoint_id')
+
+    # def write(self, vals):
+    #     self.check('write', values=vals)
+    #     print(vals, "valsvalsvalsvalsvalsvalsvalsvalsvalsvalsvals")
+    #     # remove computed field depending of datas
+    #     print(vals, "valsvalsvalsvalsvalsvalsvals")
+    #     if 'mimetype' in vals or 'datas' in vals or 'raw' in vals:
+    #         vals = self._check_contents(vals)
+    #     return super(IrAttachment, self).write(vals)
+    def unlink(self):
+        _, client_key, client_secret, tenant_id, _, _, scope, _ = BackupManagement.get_system_params(self)
+        if self.sharepoint_id:
+            SharePoint().remove_file_sharepoint(self.sharepoint_id, "", client_key, client_secret, tenant_id, scope)
+        return super(IrAttachment, self).unlink()
+class ModelAttachment(models.Model):
+    _name = "ir.model.attachment"
+    _description = "Model attachment"
+
+    model_id = fields.Many2many("ir.attachment")
+    name = fields.Char(string="Model name")
+    backup_management_id = fields.Many2one("backup.management", string="Backup Management ID")
+
+
+
 class BackupManagement(models.Model):
     _name = "backup.management"
     _description = "Backup management"
-    _inherit = ['mail.thread']
+    _inherit = ["mail.thread"]
 
     scheduler = BackgroundScheduler()
     year_selection = []
@@ -49,39 +77,23 @@ class BackupManagement(models.Model):
     ], string='Status', required=True,
         default='created')
     cron_id = fields.Char(string="Cron ID")
-    installed_models = fields.Selection(
-        lambda self: self._get_models(),
-        string="Models"
-    )
-    file = fields.Binary(sting="File")
+
+    model_ids = fields.Many2many("ir.model", string="Model Ids")
+    
     conflict_behavior = fields.Selection(selection=[
         ('fail', 'Fail'),
         ('replace', "Replace"),
         ('rename', 'Rename')
     ], string="Conflict Behavior", required=True, default='rename')
-    # stop_thread = fields.Boolean(store=False)
     is_valid = threading.Event()
 
-    # @api.model
-    # def _get_mimetype(self):
-    #     try:
-    #         query = """SELECT DISTINCT mimetype FROM ir_attachment"""
-    #         self.env.cr.execute(query)
-    #         attrs = self.env.cr.fetchall()
-    #         return [(attr[0], attr[0]) for attr in attrs]
-    #     except Exception as e:
-    #         # Handle exceptions appropriately, e.g., log the error
-    #         return [('error', str(e))]  # Return placeholder data or handle error gracefully
-
-    def get_status_thread(self):
-        return self.stop_thread
-
-    def _get_models(self):
-        installed_modules = self.sudo().env['ir.module.module'].search([('state', '=', 'installed')])
-        installed_module_names = list(set(installed_modules.mapped('name')))
-        models = self.sudo().env['ir.model'].search([])
-        installed_models = models.filtered(lambda model: model.modules in installed_module_names)
-        return [(model.model, model.name) for model in installed_models]
+    # def _get_models(self):
+    #     installed_modules = self.sudo().env['ir.module.module'].search([('state', '=', 'installed')])
+    #     installed_module_names = list(set(installed_modules.mapped('name')))
+    #     models = self.sudo().env['ir.model'].search([])
+    #     model_ids = models.filtered(lambda model: model.modules in installed_module_names)
+    #     return [(model.model, model.name) for model in model_ids]
+   
 
     def _action_notification(self, message: str):
         return {
@@ -105,7 +117,7 @@ class BackupManagement(models.Model):
             res = b._get_cron()
             if res:
                 raise UserError("please cancel backup first")
-            attachments = b.get_attachments(from_date, to_date, b.installed_models)
+            attachments = b.get_attachments(from_date, to_date, b.model_ids.ids)
             size_bytes = 0
             for idx in attachments:
                 if idx["file_size"]:
@@ -125,7 +137,7 @@ class BackupManagement(models.Model):
                 "cron_id": cron_id,
                 "total_success": 0,
             }
-            b.update_backup_management(b.env, b.id, domain)
+            b.update_backup_management(b.id, domain)
             b.add_cron(executed_at, attachments, b.id, str(cron_id), b.conflict_behavior)
 
     @api.model
@@ -135,9 +147,12 @@ class BackupManagement(models.Model):
             current_time = datetime.now()
             from_date = ""
             to_date = ""
+            model_ids = []
             if vals["from_year"] and vals["to_year"]:
                 from_date, to_date = utils.convert_time(vals["from_year"], vals["to_year"])
-            attachments = self.get_attachments(from_date, to_date, vals["installed_models"])
+            if len(vals["model_ids"][0][2]) > 0:
+                model_ids = vals["model_ids"][0][2]
+            attachments = self.get_attachments(from_date, to_date, model_ids)
             vals["total_files"] = len(attachments)
             size_bytes = 0
             for idx in attachments:
@@ -157,7 +172,7 @@ class BackupManagement(models.Model):
             self.add_cron(executed_at, attachments, res.id, vals["cron_id"], vals["conflict_behavior"])
             return res
         except Exception as e:
-            raise UserError(e)
+            raise UserError(f"something went wrong: {e}")
 
     def action_cancel_cron(self):
         try:
@@ -170,36 +185,53 @@ class BackupManagement(models.Model):
         except Exception as e:
             raise UserError(e)
 
-    def get_attachments(self, from_date: str, to_date: str, installed_models: str):
-        query = """select * from ir_attachment where name is not null"""
-        if from_date != "" and to_date != "":
-            query += """ AND ir_attachment.create_date >= '%s' AND ir_attachment.create_date <= '%s'""" % (
-                from_date, to_date)
-        if installed_models:
-            query += """ AND ir_attachment.res_model = '%s'""" % installed_models
-        self.env.cr.execute(query)
-        attrs = self.env.cr.dictfetchall()
-        return attrs
-
-    def update_backup_management(self, env, backup_id: int, data: dict):
+    def get_attachments(self, from_date: str, to_date: str, model_ids: list):
         try:
-            backup_management = env[self._name].browse(backup_id)
+            converted_str = utils.convert_query_db(const.EXCEPT_EXTENSION)
+            query = """select * from ir_attachment where type = '%s' and mimetype not in (%s)""" % (const.ATTACHMENT_BINAYRY_TYPE,converted_str)
+            if from_date != "" and to_date != "":
+                query += """ AND ir_attachment.create_date >= '%s' AND ir_attachment.create_date <= '%s'""" % (
+                    from_date, to_date)
+            
+            if len(model_ids) > 0:
+                models_name = self.get_model_name(model_ids)
+                if len(models_name) > 0:
+                    converted_str = utils.convert_query_db(models_name)
+                    query += """ AND ir_attachment.res_model in (%s)""" % converted_str
+            self.env.cr.execute(query)
+            attrs = self.env.cr.dictfetchall()
+            print(attrs, "attrs")
+            return attrs
+        except Exception as e:
+            return e
+
+    def get_model_name(self, ids: list):
+        try:
+            models_name = self.env["ir.model"].search([("id", "in", ids)])
+            names = [x["model"] for x in models_name]
+            return names
+        except Exception as e:
+            return e        
+        
+    def update_backup_management(self, backup_id: int, data: dict):
+        try:
+            backup_management = self.env[self._name].browse(backup_id)
             if backup_management:
                 backup_management.write(data)
-            print("commit backup")
-            env.cr.commit()
+            self.env.cr.commit()
         except Exception as e:
             print(f"Error updating backup management: {e}")
-            raise f"Error updating backup management: {e}"
+            raise Exception(f"Error updating backup management: {e}")
 
-    def update_atts_url(self, env, id: int, url: str):
+    def update_atts(self, id: int, url: str, sharepoint_id: str):
         try:
+            query = """update %s set url = '%s', type = '%s', store_fname = '%s', db_datas = '%s', sharepoint_id = '%s' where id = %s """ % (const.ATTACHMENT_TABLE_NAME,url, const.ATTACHMENT_URL_TYPE, "", None,sharepoint_id,id)
+            print(query, "ccccccccccccccccccccccccccccccccasdassssssssssssssssssssssssss")
             message = ""
-            att = env[const.ATTACHMENT_MODEL].browse(id)
-            if att:
-                att.write({"url": url})
-                env.cr.commit()
-                return True, message
+            self.sudo().env.cr.execute(query)
+            # attrs = env.cr.dictfetchall()
+            # print(attrs, "attrs")
+            return True, message
         except Exception as e:
             message = f"Error updating attachments: {e}"
             print(f"Error updating attachments: {e}")
@@ -225,17 +257,17 @@ class BackupManagement(models.Model):
         new_cr = self.pool.cursor()
         start_time = datetime.now()
         try:
-            new_env = self.sudo().env(cr=new_cr)
-            sys_params, host_name, client_key, client_secret, tenant_id, site_url, upload_url, scope, threads = self.get_system_params(
-                new_env)
-            update_att = {"status": const.RUNNING_STATUS}
-            self.update_backup_management(new_env, backup_id, update_att)  # update status -> running
+            # new_env = self.sudo().env(cr=new_cr)
+            self = self.with_env(self.env(cr=new_cr))
+            host_name, client_key, client_secret, tenant_id, site_url, upload_url, scope, threads = self.get_system_params()
+            update_record = {"status": const.RUNNING_STATUS}
+            self.update_backup_management(backup_id, update_record)  # update status -> running
             db_name = self.env.cr.dbname
             processes = []
             # url_test2 = "https://graph.microsoft.com/v1.0/drives/b!IJWKFS9o9ESgbLk8b6sLTph4xN05W3RPuyn_G18c2-igsr8sgTbnQrBcjG-DqtVC/root:/TestFolder"
             path_gen = os.path.join(DATA_DIR, "filestore", db_name)
             total_success = 0
-            self = self.with_env(self.env(cr=new_cr))
+            # self = self.with_env(self.env(cr=new_cr))
             with ThreadPoolExecutor(max_workers=int(threads)) as executor:
                 for attachment in data:
                     if self.is_valid.is_set():
@@ -244,7 +276,7 @@ class BackupManagement(models.Model):
                         executor.submit(self.handle_request_sharepoint, path_gen, attachment['store_fname'],
                                         attachment["name"], attachment["mimetype"], attachment["create_date"],
                                         attachment["res_model"], upload_url, host_name, client_key, client_secret,
-                                        tenant_id, scope, behavior, attachment["id"], new_env, backup_id,
+                                        tenant_id, scope, behavior, attachment["id"], backup_id,
                                         attachment["db_datas"]))
             for process in as_completed(processes):
                 if self.is_valid.is_set():
@@ -254,9 +286,9 @@ class BackupManagement(models.Model):
                     total_success += 1
             if not self.is_valid.is_set():
                 total_time = datetime.now() - start_time
-                update_att = {"status": const.DONE_STATUS, "total_success": total_success,
+                update_record = {"status": const.DONE_STATUS, "total_success": total_success,
                               "total_time": utils.convert_time_measure(total_time)}
-                self.update_backup_management(new_env, backup_id, update_att)  # update status -> finished
+                self.update_backup_management(backup_id, update_record)  # update status -> finished
             return
         except Exception as e:
             # new_cr.rollback()
@@ -265,8 +297,8 @@ class BackupManagement(models.Model):
             new_cr.close()  # Closing the cursor when done
         return True
 
-    def get_system_params(self, new_env):
-        sys_params = new_env['ir.config_parameter'].sudo()
+    def get_system_params(self):
+        sys_params = self.env['ir.config_parameter'].sudo()
         host_name = utils.get_host_name(sys_params.get_param('web.base.url'))
         client_key = sys_params.get_param('sharepoint.client_key')
         client_secret = sys_params.get_param('sharepoint.client_secret')
@@ -275,11 +307,11 @@ class BackupManagement(models.Model):
         site_url = sys_params.get_param('sharepoint.site_url')
         scope = sys_params.get_param('sharepoint.scope')
         threads = sys_params.get_param('sharepoint.threads')
-        return sys_params, host_name, client_key, client_secret, tenant_id, site_url, upload_url, scope, threads
+        return host_name, client_key, client_secret, tenant_id, site_url, upload_url, scope, threads
 
     def handle_request_sharepoint(self, path_gen: str, store_fname: str, name: str, mimetype, create_date: datetime,
                                   res_model: str, upload_url, host_name, client_key, client_secret, tenant_id, scope,
-                                  behavior, attachment_id: int, new_env, backup_id: str, db_datas):
+                                  behavior, attachment_id: int, backup_id: str, db_datas):
         try:
             if self.is_valid.is_set():
                 return
@@ -287,36 +319,38 @@ class BackupManagement(models.Model):
             if store_fname:
                 file_path = os.path.join(path_gen, store_fname)
             extension = mimetypes.guess_extension(mimetype)
-
+            print(extension, "extension")
             year = utils.get_year(str(create_date))
-            path_upload = f"{upload_url}/{host_name}/{res_model}/{year}/{name}{extension}"
-            sharepoint_res = SharePoint().upload_file_to_sharepoint(path_upload, file_path, client_key,
+            upload_path = f"{upload_url}/{host_name}/{res_model}/{year}/{name}{extension}"
+            print(upload_path, "upload_path")
+            sharepoint_res = SharePoint().upload_file_to_sharepoint(upload_path, file_path, client_key,
 
                                                                     client_secret, tenant_id, scope, behavior, db_datas)
             log_type = const.DB_TYPE
             message = None
-            web_url = None
+            download_url = None
             if sharepoint_res.status_code == http.HTTPStatus.OK or sharepoint_res.status_code == http.HTTPStatus.CREATED:
                 json_data = sharepoint_res.json()
-                web_url = json_data["webUrl"]
-                update_atts_url, db_message = self.update_atts_url(new_env, attachment_id, web_url)
+                download_url = json_data["@microsoft.graph.downloadUrl"]
+                sharepoint_id = json_data["id"]
+                update_atts_url, db_message = self.update_atts(attachment_id, download_url, sharepoint_id)
                 message = db_message
-                if update_atts_url:
-                    # utils.delete_file(file_path)
+                if update_atts_url and store_fname:
+                    utils.delete_file(file_path)
                     return True
             else:
                 message = sharepoint_res.json()["error"]["message"]
                 log_type = const.SHAREPOINT_TYPE
 
-            new_env["log.backup"].create({
+            self.env["log.backup"].create({
                 'backup_id': backup_id,
                 "status_code": sharepoint_res.status_code,
                 "message": message,
                 "log_type": log_type,
-                "url": web_url,
+                "url": download_url,
                 "attachment_name": name,
             })
-            new_env.cr.commit()
+            self.env.cr.commit()
             return False
         except Exception as e:
             # new_env.cr.roll

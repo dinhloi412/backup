@@ -44,3 +44,8 @@ def convert_time_measure(t: datetime):
     minutes, seconds = divmod(remainder, 60)
     time_elapsed_formatted = '{:02d}:{:02d}:{:02d}'.format(int(hours), int(minutes), int(seconds))
     return time_elapsed_formatted
+
+
+def convert_query_db(data: list):
+    res = ', '.join(["'%s'" % name for name in data])
+    return res
