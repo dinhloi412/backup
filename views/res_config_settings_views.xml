@@ -3,43 +3,52 @@
     <record id="res_config_settings_view_form" model="ir.ui.view">
         <field name="name">res.config.settings.view.sharepoint.backup</field>
         <field name="model">res.config.settings</field>
-        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form" />
         <field name="arch" type="xml">
             <xpath expr="//div[hasclass('settings')]" position="inside">
-                <div class="app_settings_block" id="sharepoint" data-string="Sharepoint" string="Sharepoint"
-                     data-key="sharepoint" groups="base.group_user">
+                <div class="app_settings_block" id="sharepoint" data-string="Sharepoint"
+                    string="Sharepoint"
+                    data-key="sharepoint" groups="base.group_user">
                     <h2>Sharepoint config</h2>
                     <div class="row mt16 o_settings_container">
                         <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_left_pane"/>
+                            <div class="o_setting_left_pane" />
                             <div class="o_setting_right_pane">
                                 <div class="row ml32">
                                     <span class="o_form_label">Client key</span>
-                                    <field name="sharepoint_client_key"/>
+                                    <field name="sharepoint_client_key" />
                                 </div>
                                 <div class="row ml32">
                                     <span class="o_form_label">Client secret</span>
-                                    <field name="sharepoint_client_secret"/>
+                                    <field name="sharepoint_client_secret" />
                                 </div>
                                 <div class="row ml32">
                                     <span class="o_form_label">Tenant Id</span>
-                                    <field name="sharepoint_tenant_id"/>
+                                    <field name="sharepoint_tenant_id" />
                                 </div>
                                 <div class="row ml32">
                                     <span class="o_form_label">Scope</span>
-                                    <field name="sharepoint_scope"/>
+                                    <field name="sharepoint_scope" />
                                 </div>
                                 <div class="row ml32">
                                     <span class="o_form_label">Site Url</span>
-                                    <field name="sharepoint_site_url"/>
+                                    <field name="sharepoint_site_url" />
                                 </div>
                                 <div class="row ml32">
                                     <span class="o_form_label">Upload Url</span>
-                                    <field name="sharepoint_upload_url"/>
+                                    <field name="sharepoint_upload_url" />
                                 </div>
-                                 <div class="row ml32">
+                                <div class="row ml32">
+                                    <span class="o_form_label">Drive Url</span>
+                                    <field name="sharepoint_drive_url" />
+                                </div>
+                                <div class="row ml32">
+                                    <span class="o_form_label">Root Folder</span>
+                                    <field name="sharepoint_root_folder" />
+                                </div>
+                                <div class="row ml32">
                                     <span class="o_form_label">Max threads</span>
-                                    <field name="sharepoint_threads"/>
+                                    <field name="sharepoint_threads" />
                                 </div>
                             </div>
                         </div>

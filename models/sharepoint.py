@@ -1,3 +1,5 @@
+import os
+
 import requests
 import odoo
 from http import HTTPStatus
@@ -24,17 +26,20 @@ class SharePoint:
             print(f"Failed to get access token. Status code: {response.status_code}")
             return None
 
-    def upload_file_to_sharepoint(self, upload_path, file_path, client_key: str, client_secret: str, tenant_id: str, scope: str, behavior: str, datas):
+    def upload_file_to_sharepoint(self, upload_path, file_path, client_key: str, client_secret: str, tenant_id: str, scope: str, behavior: str, file_content):
         try:
             self.token = self._get_access_token(client_key, client_secret, tenant_id, scope)
             conflict_behavior = self.conflict_behavior(behavior)
             print(upload_path, "path_upload")
             res_url = f"{upload_path}:/content{conflict_behavior}"
             # Read the file content
-            file_content = datas
-            if file_path:
-                with open(file_path, 'rb') as file:
-                    file_content = file.read()
+            # file_content = datas
+            # if file_path:
+            #     if os.path.exists(file_path):
+            #         with open(file_path, 'rb') as file:
+            #             file_content = file.read()
+            #     else:
+            #         pass
             # Set up the headers with the access token
             headers = {
                 'Authorization': f'Bearer {self.token}',
@@ -48,10 +53,10 @@ class SharePoint:
         except Exception as e:
             return e
 
-    def remove_file_sharepoint(self, sharepoint_id: str, delete_url,client_key, client_secret, tenant_id, scope):
+    def remove_file_sharepoint(self, sharepoint_id: str, drive_url, client_key, client_secret, tenant_id, scope):
         try:
-            test_url = "https://graph.microsoft.com/v1.0/drives/b!IJWKFS9o9ESgbLk8b6sLTph4xN05W3RPuyn_G18c2-igsr8sgTbnQrBcjG-DqtVC"
-            res_url = f"{test_url}/items/{sharepoint_id}"
+            # test_url = "https://graph.microsoft.com/v1.0/drives/b!IJWKFS9o9ESgbLk8b6sLTph4xN05W3RPuyn_G18c2-igsr8sgTbnQrBcjG-DqtVC"
+            res_url = f"{drive_url}/items/{sharepoint_id}"
             print(res_url, "res_url")
             self.token = self._get_access_token(client_key, client_secret, tenant_id, scope)
             headers = {

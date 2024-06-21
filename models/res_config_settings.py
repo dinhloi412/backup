@@ -12,6 +12,8 @@ class ResConfigSettings(models.TransientModel):
     sharepoint_scope = fields.Char(string="Sharepoint scope", config_parameter='sharepoint.scope')
     sharepoint_site_url = fields.Char(string="Sharepoint site url", config_parameter='sharepoint.site_url')
     sharepoint_upload_url = fields.Char(string="Sharepoint upload url", config_parameter='sharepoint.upload_url')
+    sharepoint_drive_url = fields.Char(string="Sharepoint drive url", config_parameter='sharepoint.drive_url')
+    sharepoint_root_folder = fields.Char(string="Sharepoint root folder", config_parameter='sharepoint.root_folder')
     sharepoint_threads = fields.Integer(string="Sharepoint threads", config_parameter='sharepoint.threads')
 
 

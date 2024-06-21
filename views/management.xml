@@ -53,6 +53,8 @@
                         class="btn btn-primary" />
                     <button name="open_log_wizard" string="Open log" type="object"
                         class="btn btn-secondary" />
+                    <button name="delete_atts" string="Delete atts" type="object"
+                        class="btn btn-secondary" />
                 </header>
                 <sheet>
                     <group>

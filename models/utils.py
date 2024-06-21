@@ -11,7 +11,8 @@ def convert_time(from_year: str, to_year: str):
         from_end_date = datetime(to_year, 12, 31).strftime('%Y-%m-%d')
         return from_start_date, from_end_date
     except Exception as e:
-        return e
+        return (f"cannot convert time: ", {e})
+
 
 
 def get_year(timestamp: str):
@@ -30,6 +31,17 @@ def delete_file(file_path: str):
             os.remove(file_path)
     except FileNotFoundError:
         print(f"File '{file_path}' not found.")
+
+
+def read_file(file_path: str):
+    try:
+        file_content = None
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as file:
+                file_content = file.read()
+        return file_content
+    except Exception as e:
+        return (f"cannot read file '{file_path}: ", {e})
 
 
 def get_host_name(url: str):
