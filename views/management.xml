@@ -7,20 +7,18 @@
             <tree
                 decoration-success="status == 'done'"
                 decoration-info="status =='created'"
-                decoration-danger="status=='failed'"
                 decoration-muted="status=='running'"
                 decoration-warning="status=='cancelled'"
             >
                 <header>
-                    <button name="action_migrate" string="Migrate" type="object"
-                        class="btn btn-warning" />
+                    <!-- <button name="action_migrate" string="Migrate" type="object"
+                        class="btn btn-warning" /> -->
                     <button name="action_cancel_cron" string="Cancel Backup" class="btn btn-danger"
                         type="object" />
                 </header>
                 <field name="name" />
-                <!--                <field name="model_ids"/>-->
-                <field name="from_year" />
-                <field name="to_year" />
+                <field name="from_date" />
+                <field name="to_date" />
                 <field name="is_scheduled" />
                 <field name="executed_at" />
                 <field name="total_size" />
@@ -30,7 +28,6 @@
                 <field name="status" widget="badge"
                     decoration-success="status == 'done'"
                     decoration-info="status =='created'"
-                    decoration-danger="status=='failed'"
                     decoration-muted="status=='running'"
                     decoration-warning="status=='cancelled'"
                 />
@@ -44,16 +41,14 @@
             <form>
                 <header>
                     <field name="status" widget="statusbar" nolabel="1"
-                        statusbar_visible="created,running,done,failed,cancelled" />
+                        statusbar_visible="created,running,done,cancelled" />
                     <button name="action_cancel_cron" string="Cancel Backup" class="oe_highlight"
                         confirm="Cancel this item?"
                         attrs="{'invisible': ['&amp;',('status', '!=', 'created'),('status', '!=', 'running')]}"
                         type="object" />
-                    <button name="action_migrate" string="Migrate" type="object"
-                        class="btn btn-primary" />
+                    <!-- <button name="action_migrate" string="Migrate" type="object"
+                        class="btn btn-primary" /> -->
                     <button name="open_log_wizard" string="Open log" type="object"
-                        class="btn btn-secondary" />
-                    <button name="delete_atts" string="Delete atts" type="object"
                         class="btn btn-secondary" />
                 </header>
                 <sheet>
@@ -66,13 +61,11 @@
                                 attrs="{'readonly': [('id', '!=', False)]}" />
                             <field name="executed_at"
                                 attrs="{'invisible': [('is_scheduled', '=', False)], 'readonly': [('id', '!=', False)]}" />
-
-                            <!--                            <field name="except_data_type"/>-->
                         </group>
                         <group>
-                            <field name="from_year" placehoder="year"
+                            <field name="from_date" placehoder="year"
                                 attrs="{'readonly': [('id', '!=', False)]}" />
-                            <field name="to_year" attrs="{'readonly': [('id', '!=', False)]}" />
+                            <field name="to_date" attrs="{'readonly': [('id', '!=', False)]}" />
                             <field name="conflict_behavior" />
                         </group>
                     </group>
@@ -121,7 +114,7 @@
         id="menu_backup_management"
         name="Backup Management"
         action="action_backup_management"
-        parent="menu_backup"
+        parent="menu_backup_root"
         sequence="0"
     />
 </odoo>

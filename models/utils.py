@@ -1,18 +1,16 @@
-import requests
 import os
 from datetime import datetime
 
 
-def convert_time(from_year: str, to_year: str):
-    try:
-        from_year = int(from_year)
-        to_year = int(to_year)
-        from_start_date = datetime(from_year, 1, 1).strftime('%Y-%m-%d')
-        from_end_date = datetime(to_year, 12, 31).strftime('%Y-%m-%d')
-        return from_start_date, from_end_date
-    except Exception as e:
-        return (f"cannot convert time: ", {e})
-
+# def convert_time(from_year: str, to_year: str):
+#     try:
+#         from_year = int(from_year)
+#         to_year = int(to_year)
+#         from_start_date = datetime(from_year, 1, 1).strftime("%Y-%m-%d")
+#         from_end_date = datetime(to_year, 12, 31).strftime("%Y-%m-%d")
+#         return from_start_date, from_end_date
+#     except Exception as e:
+#         raise Exception(e)
 
 
 def get_year(timestamp: str):
@@ -21,7 +19,7 @@ def get_year(timestamp: str):
 
 
 def convert_bytes_to_gb(bytes: float):
-    gb = bytes / (1024 ** 3)
+    gb = bytes / (1024**3)
     return gb
 
 
@@ -30,18 +28,18 @@ def delete_file(file_path: str):
         if os.path.exists(file_path):
             os.remove(file_path)
     except FileNotFoundError:
-        print(f"File '{file_path}' not found.")
+        raise Exception(f"File '{file_path}' not found.")
 
 
 def read_file(file_path: str):
     try:
         file_content = None
         if os.path.exists(file_path):
-            with open(file_path, 'rb') as file:
+            with open(file_path, "rb") as file:
                 file_content = file.read()
         return file_content
     except Exception as e:
-        return (f"cannot read file '{file_path}: ", {e})
+        raise Exception(f"cannot read file '{file_path}: ", {e})
 
 
 def get_host_name(url: str):
@@ -54,10 +52,12 @@ def get_host_name(url: str):
 def convert_time_measure(t: datetime):
     hours, remainder = divmod(t.total_seconds(), 3600)
     minutes, seconds = divmod(remainder, 60)
-    time_elapsed_formatted = '{:02d}:{:02d}:{:02d}'.format(int(hours), int(minutes), int(seconds))
+    time_elapsed_formatted = "{:02d}:{:02d}:{:02d}".format(
+        int(hours), int(minutes), int(seconds)
+    )
     return time_elapsed_formatted
 
 
 def convert_query_db(data: list):
-    res = ', '.join(["'%s'" % name for name in data])
+    res = ", ".join(["'%s'" % name for name in data])
     return res
