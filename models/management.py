@@ -180,8 +180,9 @@ class BackupManagement(models.Model):
         except Exception as e:
             return f"cannot get attachments: {e}"
     
-    def get_attachments_by_id(self, id: int):
-        data = self.env[const.ATTACHMENT_MODEL].browse(id)
+    def get_attachment_by_id(self, id: int):
+        data = self.sudo().env[const.ATTACHMENT_MODEL].browse(id)
+        _logger.info(data, "id")
         return data
 
     def get_model_name(self, ids: list):
@@ -263,7 +264,7 @@ class BackupManagement(models.Model):
 
             with ThreadPoolExecutor(max_workers=int(threads)) as executor:
                 for id in att_ids:
-                    attachment = self.get_attachments_by_id(id)
+                    attachment = self.get_attachment_by_id(id["id"])
                     if self.is_valid.is_set():
                         break
                     processes.append(
@@ -439,7 +440,10 @@ class BackupManagement(models.Model):
         attachments = self.get_attachments(
             vals["from_date"], vals["to_date"], model_ids
         )
+        print(attachments, "attachmentsattachmentsattachments")
         _logger.info(f"length of attachments: {len(attachments)}")
+        if len(attachments) == 0:
+            raise UserError("No attachments found")
         vals["total_files"] = len(attachments)
         # size_bytes = 0
         # for idx in attachments:
