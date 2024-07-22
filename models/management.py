@@ -182,7 +182,7 @@ class BackupManagement(models.Model):
     
     def get_attachment_by_id(self, id: int):
         data = self.sudo().env[const.ATTACHMENT_MODEL].browse(id)
-        _logger.info(data, "id")
+        _logger.info(f"data {id}")
         return data
 
     def get_model_name(self, ids: list):
@@ -261,10 +261,12 @@ class BackupManagement(models.Model):
             upload_url = f"{drive_url}/root:/{root_folder}"
             path_gen = os.path.join(DATA_DIR, "filestore", db_name)
             total_success = 0
-
+            print(att_ids, "att_ids")
             with ThreadPoolExecutor(max_workers=int(threads)) as executor:
                 for id in att_ids:
-                    attachment = self.get_attachment_by_id(id["id"])
+                    print(id, "amama")
+                    print(id["id"], "testid")
+                    attachment = self.get_attachment_by_id(int(id["id"]))
                     if self.is_valid.is_set():
                         break
                     processes.append(
@@ -374,7 +376,7 @@ class BackupManagement(models.Model):
                         ("type", "=", const.ATTACHMENT_URL_TYPE),
                     ]
                 )
-                _logger.info(atts, "atts")
+                _logger.info(f"atts, {atts}")
                 # self.update_atts(
                 #     attachment_id, atts[0]["url"], atts[0]["sharepoint_id"]
                 # )
@@ -382,7 +384,7 @@ class BackupManagement(models.Model):
         # extension = mimetypes.guess_extension(mimetype)
         year = utils.get_year(str(create_date))
         upload_path = f"{upload_url}/{host_name}/{res_model}/{year}/{name}"
-        _logger.info(upload_path)
+        _logger.info(f"upload_path: {upload_path}")
 
         sharepoint_res = SharePoint().upload_file_to_sharepoint(
             upload_path,
@@ -402,7 +404,7 @@ class BackupManagement(models.Model):
             json_data = sharepoint_res.json()
             download_url = json_data["@microsoft.graph.downloadUrl"]
             sharepoint_id = json_data["id"]
-            _logger.info(sharepoint_id, "sharepoint_id")
+            _logger.info(f"sharepoint_id: {sharepoint_id}")
             # self.update_atts(attachment_id, download_url, sharepoint_id)
             # if store_fname:
             #     utils.delete_file(file_path)
