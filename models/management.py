@@ -160,7 +160,7 @@ class BackupManagement(models.Model):
         try:
             converted_str = utils.convert_query_db(const.EXCEPT_EXTENSION)
             query = (
-                """select * from ir_attachment where type = '%s' and mimetype not in (%s)"""
+                """select id from ir_attachment where type = '%s' and mimetype not in (%s)"""
                 % (const.ATTACHMENT_BINAYRY_TYPE, converted_str)
             )
             if start_date != "" and end_date != "":
@@ -179,6 +179,10 @@ class BackupManagement(models.Model):
             return attrs
         except Exception as e:
             return f"cannot get attachments: {e}"
+    
+    def get_attachments_by_id(self, id: int):
+        data = self.env[const.ATTACHMENT_MODEL].browse(id)
+        return data
 
     def get_model_name(self, ids: list):
         models_name = self.env["ir.model"].search([("id", "in", ids)])
@@ -228,7 +232,7 @@ class BackupManagement(models.Model):
         if self.scheduler.state == 0:
             self.scheduler.start()
 
-    def sharepoint_upload(self, data: list, backup_id: int, behavior: str):
+    def sharepoint_upload(self, att_ids: list, backup_id: int, behavior: str):
         new_cr = self.pool.cursor()
         start_time = datetime.now()
         try:
@@ -258,7 +262,8 @@ class BackupManagement(models.Model):
             total_success = 0
 
             with ThreadPoolExecutor(max_workers=int(threads)) as executor:
-                for attachment in data:
+                for id in att_ids:
+                    attachment = self.get_attachments_by_id(id)
                     if self.is_valid.is_set():
                         break
                     processes.append(
@@ -368,9 +373,10 @@ class BackupManagement(models.Model):
                         ("type", "=", const.ATTACHMENT_URL_TYPE),
                     ]
                 )
-                self.update_atts(
-                    attachment_id, atts[0]["url"], atts[0]["sharepoint_id"]
-                )
+                _logger.info(atts, "atts")
+                # self.update_atts(
+                #     attachment_id, atts[0]["url"], atts[0]["sharepoint_id"]
+                # )
                 return True
         # extension = mimetypes.guess_extension(mimetype)
         year = utils.get_year(str(create_date))
@@ -395,9 +401,10 @@ class BackupManagement(models.Model):
             json_data = sharepoint_res.json()
             download_url = json_data["@microsoft.graph.downloadUrl"]
             sharepoint_id = json_data["id"]
-            self.update_atts(attachment_id, download_url, sharepoint_id)
-            if store_fname:
-                utils.delete_file(file_path)
+            _logger.info(sharepoint_id, "sharepoint_id")
+            # self.update_atts(attachment_id, download_url, sharepoint_id)
+            # if store_fname:
+            #     utils.delete_file(file_path)
             return True
 
         self.env["log.backup"].create(
@@ -433,20 +440,20 @@ class BackupManagement(models.Model):
             vals["from_date"], vals["to_date"], model_ids
         )
         _logger.info(f"length of attachments: {len(attachments)}")
-
         vals["total_files"] = len(attachments)
-        size_bytes = 0
-        for idx in attachments:
-            if idx["file_size"]:
-                size_bytes += int(idx["file_size"])
-        res = utils.convert_bytes_to_gb(size_bytes)
-        vals["total_size"] = res
+        # size_bytes = 0
+        # for idx in attachments:
+        #     if idx["file_size"]:
+        #         size_bytes += int(idx["file_size"])
+        # res = utils.convert_bytes_to_gb(size_bytes)
+        # vals["total_size"] = res
         if vals["executed_at"] != "":
             new_time = current_time + timedelta(seconds=3)
             new_time = new_time.replace(microsecond=0)
             vals["executed_at"] = str(new_time)
         if vals["executed_at"] == "":
             raise UserError("executed_at cannot be empty")
+            
         vals["cron_id"] = str(uuid.uuid4())
         res = super(BackupManagement, self).create(vals)
         executed_at = datetime.strptime(vals["executed_at"], "%Y-%m-%d %H:%M:%S")
