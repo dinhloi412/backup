@@ -157,29 +157,26 @@ class BackupManagement(models.Model):
         return True
 
     def get_attachments(self, start_date: str, end_date: str, model_ids: list):
-        try:
-            converted_str = utils.convert_query_db(const.EXCEPT_EXTENSION)
-            query = (
-                """select id from ir_attachment where type = '%s' and mimetype not in (%s)"""
-                % (const.ATTACHMENT_BINAYRY_TYPE, converted_str)
+        converted_str = utils.convert_query_db(const.EXCEPT_EXTENSION)
+        query = (
+            """select id from ir_attachment where type = '%s' and mimetype not in (%s)"""
+            % (const.ATTACHMENT_BINAYRY_TYPE, converted_str)
+        )
+        if start_date != "" and end_date != "":
+            query += (
+                """ AND ir_attachment.create_date >= '%s' AND ir_attachment.create_date <= '%s'"""
+                % (start_date, end_date)
             )
-            if start_date != "" and end_date != "":
-                query += (
-                    """ AND ir_attachment.create_date >= '%s' AND ir_attachment.create_date <= '%s'"""
-                    % (start_date, end_date)
-                )
 
-            if len(model_ids) > 0:
-                models_name = self.get_model_name(model_ids)
-                if len(models_name) > 0:
-                    converted_str = utils.convert_query_db(models_name)
-                    query += """ AND ir_attachment.res_model in (%s)""" % converted_str
-            self.env.cr.execute(query)
-            attrs = self.env.cr.dictfetchall()
-            return attrs
-        except Exception as e:
-            return f"cannot get attachments: {e}"
-    
+        if len(model_ids) > 0:
+            models_name = self.get_model_name(model_ids)
+            if len(models_name) > 0:
+                converted_str = utils.convert_query_db(models_name)
+                query += """ AND ir_attachment.res_model in (%s)""" % converted_str
+        self.env.cr.execute(query)
+        attrs = self.env.cr.dictfetchall()
+        return attrs
+
     def get_attachment_by_id(self, id: int):
         data = self.sudo().env[const.ATTACHMENT_MODEL].browse(id)
         _logger.info(f"data {id}")
@@ -236,82 +233,75 @@ class BackupManagement(models.Model):
     def sharepoint_upload(self, att_ids: list, backup_id: int, behavior: str):
         new_cr = self.pool.cursor()
         start_time = datetime.now()
-        try:
-            # new_env = self.sudo().env(cr=new_cr)
-            self = self.with_env(self.env(cr=new_cr))
-            (
-                host_name,
-                client_key,
-                client_secret,
-                tenant_id,
-                _,
-                upload_url,
-                scope,
-                threads,
-                drive_url,
-                root_folder,
-            ) = self.get_system_params()
-            update_record = {"status": const.RUNNING_STATUS}
-            self.update_backup_management(
-                backup_id, update_record
-            )  # update status -> running
 
-            db_name = self.env.cr.dbname
-            processes = []
-            upload_url = f"{drive_url}/root:/{root_folder}"
-            path_gen = os.path.join(DATA_DIR, "filestore", db_name)
-            total_success = 0
-            print(att_ids, "att_ids")
-            with ThreadPoolExecutor(max_workers=int(threads)) as executor:
-                for id in att_ids:
-                    print(id, "amama")
-                    print(id["id"], "testid")
-                    attachment = self.get_attachment_by_id(int(id["id"]))
-                    if self.is_valid.is_set():
-                        break
-                    processes.append(
-                        executor.submit(
-                            self.handle_request_sharepoint,
-                            path_gen,
-                            attachment["store_fname"],
-                            attachment["name"],
-                            attachment["mimetype"],
-                            attachment["create_date"],
-                            attachment["res_model"],
-                            upload_url,
-                            host_name,
-                            client_key,
-                            client_secret,
-                            tenant_id,
-                            scope,
-                            behavior,
-                            attachment["id"],
-                            backup_id,
-                            attachment["db_datas"],
-                            attachment["checksum"],
-                        )
-                    )
-            for process in as_completed(processes):
+        # new_env = self.sudo().env(cr=new_cr)
+        self = self.with_env(self.env(cr=new_cr))
+        (
+            host_name,
+            client_key,
+            client_secret,
+            tenant_id,
+            _,
+            upload_url,
+            scope,
+            threads,
+            drive_url,
+            root_folder,
+        ) = self.get_system_params()
+        update_record = {"status": const.RUNNING_STATUS}
+        self.update_backup_management(
+            backup_id, update_record
+        )  # update status -> running
+
+        db_name = self.env.cr.dbname
+        processes = []
+        upload_url = f"{drive_url}/root:/{root_folder}"
+        path_gen = os.path.join(DATA_DIR, "filestore", db_name)
+        total_success = 0
+        with ThreadPoolExecutor(max_workers=int(threads)) as executor:
+            for id in att_ids:
+                attachment = self.get_attachment_by_id(int(id["id"]))
                 if self.is_valid.is_set():
                     break
-                result = process.result()
-                if result:
-                    total_success += 1
-            if not self.is_valid.is_set():
-                total_time = datetime.now() - start_time
-                update_record = {
-                    "status": const.DONE_STATUS,
-                    "total_success": total_success,
-                    "total_time": utils.convert_time_measure(total_time),
-                }
-                self.update_backup_management(
-                    backup_id, update_record
-                )  # update status -> finished
-            return
-        except Exception as e:
-            _logger.error(e)
-        finally:
-            new_cr.close()  # Closing the cursor when done
+                processes.append(
+                    executor.submit(
+                        self.handle_request_sharepoint,
+                        path_gen,
+                        attachment["store_fname"],
+                        attachment["name"],
+                        attachment["mimetype"],
+                        attachment["create_date"],
+                        attachment["res_model"],
+                        upload_url,
+                        host_name,
+                        client_key,
+                        client_secret,
+                        tenant_id,
+                        scope,
+                        behavior,
+                        attachment["id"],
+                        backup_id,
+                        attachment["db_datas"],
+                        attachment["checksum"],
+                    )
+                )
+        for process in as_completed(processes):
+            if self.is_valid.is_set():
+                break
+            result = process.result()
+            if result:
+                total_success += 1
+        if not self.is_valid.is_set():
+            total_time = datetime.now() - start_time
+            update_record = {
+                "status": const.DONE_STATUS,
+                "total_success": total_success,
+                "total_time": utils.convert_time_measure(total_time),
+            }
+            self.update_backup_management(
+                backup_id, update_record
+            )  # update status -> finished
+        new_cr.close()
         return True
 
     def get_system_params(self):
@@ -459,7 +449,7 @@ class BackupManagement(models.Model):
             vals["executed_at"] = str(new_time)
         if vals["executed_at"] == "":
             raise UserError("executed_at cannot be empty")
-            
+
         vals["cron_id"] = str(uuid.uuid4())
         res = super(BackupManagement, self).create(vals)
         executed_at = datetime.strptime(vals["executed_at"], "%Y-%m-%d %H:%M:%S")
