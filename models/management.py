@@ -353,7 +353,7 @@ class BackupManagement(models.Model):
 
         if self.is_valid.is_set():
             return
-        file_content = db_datas
+        file_content = None
         file_path = None
 
         if store_fname:
@@ -371,6 +371,8 @@ class BackupManagement(models.Model):
                 #     attachment_id, atts[0]["url"], atts[0]["sharepoint_id"]
                 # )
                 return True
+        else:
+            file_content = db_datas
         # extension = mimetypes.guess_extension(mimetype)
         year = utils.get_year(str(create_date))
         upload_path = f"{upload_url}/{host_name}/{res_model}/{year}/{name}"
@@ -432,7 +434,6 @@ class BackupManagement(models.Model):
         attachments = self.get_attachments(
             vals["from_date"], vals["to_date"], model_ids
         )
-        print(attachments, "attachmentsattachmentsattachments")
         _logger.info(f"length of attachments: {len(attachments)}")
         if len(attachments) == 0:
             raise UserError("No attachments found")
