@@ -28,17 +28,15 @@ class IrAttachment(models.Model):
     sharepoint_id = fields.Char("sharepoint_id")
 
     def unlink(self):
-        _, client_key, client_secret, tenant_id, _, _, scope, _, drive_url, _ = (
-            BackupManagement.get_system_params(self)
-        )
+        system_params = BackupManagement.get_system_params(self)
         if self.sharepoint_id:
             SharePoint().remove_file_sharepoint(
                 self.sharepoint_id,
-                drive_url,
-                client_key,
-                client_secret,
-                tenant_id,
-                scope,
+                system_params["drive_url"],
+                system_params["client_key"],
+                system_params["client_secret"],
+                system_params["tenant_id"],
+                system_params["scope"],
             )
         return super(IrAttachment, self).unlink()
 
@@ -109,45 +107,6 @@ class BackupManagement(models.Model):
             return True
         return False
 
-    # def action_migrate(self):
-    #     for record in self:
-    #         from_date_convert, to_date_convert = utils.convert_time(
-    #             record.from_date, record.to_date
-    #         )
-    #         res = record._get_cron()
-    #         if res:
-    #             raise ValidationError("please cancel backup first")
-    #         attachments = record.get_attachments(
-    #             from_date_convert, to_date_convert, record.model_ids.ids
-    #         )
-    #         size_bytes = 0
-    #         for idx in attachments:
-    #             if idx["file_size"]:
-    #                 size_bytes += int(idx["file_size"])
-    #         res = utils.convert_bytes_to_gb(size_bytes)
-
-    #         new_time = datetime.now() + timedelta(seconds=10)
-    #         new_time = new_time.replace(microsecond=0)
-    #         executed_at = datetime.strptime(str(new_time), "%Y-%m-%d %H:%M:%S")
-
-    #         cron_id = uuid.uuid4()
-    #         domain = {
-    #             "total_size": res,
-    #             "total_files": len(attachments),
-    #             "executed_at": executed_at,
-    #             "status": const.RUNNING_STATUS,
-    #             "cron_id": cron_id,
-    #             "total_success": 0,
-    #         }
-    #         record.update_backup_management(record.id, domain)
-    #         record.add_cron(
-    #             executed_at,
-    #             attachments,
-    #             record.id,
-    #             str(cron_id),
-    #             record.conflict_behavior,
-    #         )
-
     def action_cancel_cron(self):
         for record in self:
             if record.scheduler.get_job(record.cron_id) is not None:
@@ -177,18 +136,24 @@ class BackupManagement(models.Model):
         attrs = self.env.cr.dictfetchall()
         return attrs
 
-    def get_attachment_by_id(self, id: int):
-        data = self.sudo().env[const.ATTACHMENT_MODEL].browse(id)
-        _logger.info(f"data {id}")
-        return data
+    def get_attachment_by_id(self, new_cr, id: int):
+        attachment = (
+            self.env[const.ATTACHMENT_MODEL].browse(id).with_env(self.env(cr=new_cr))
+        )
+        if not attachment:
+            _logger.warning(f"Attachment with ID {id} not found")
+            return None
+        return attachment
 
     def get_model_name(self, ids: list):
         models_name = self.env["ir.model"].search([("id", "in", ids)])
         names = [x["model"] for x in models_name]
         return names
 
-    def update_backup_management(self, backup_id: int, data: dict):
-        backup_management = self.env[self._name].browse(backup_id)
+    def update_backup_management(self, new_cr, backup_id: int, data: dict):
+        backup_management = (
+            self.env[self._name].browse(backup_id).with_env(self.env(cr=new_cr))
+        )
         if backup_management:
             backup_management.write(data)
         return self.env.cr.commit()
@@ -211,7 +176,13 @@ class BackupManagement(models.Model):
         return True
 
     def add_cron(
-        self, executed_at, data: list, backup_id: int, cron_id: str, behavior: str
+        self,
+        executed_at,
+        data: list,
+        backup_id: int,
+        cron_id: str,
+        behavior: str,
+        system_params: dict,
     ):
         self.scheduler.add_job(
             self.sharepoint_upload,
@@ -224,52 +195,47 @@ class BackupManagement(models.Model):
                 int(executed_at.minute),
                 int(executed_at.second),
             ),
-            args=[data, backup_id, behavior],
+            args=[data, backup_id, behavior, system_params],
             id=cron_id,
         )
         if self.scheduler.state == 0:
             self.scheduler.start()
 
-    def sharepoint_upload(self, att_ids: list, backup_id: int, behavior: str):
-        new_cr = self.pool.cursor()
+    def sharepoint_upload(
+        self, att_ids: list, backup_id: int, behavior: str, system_params: dict
+    ):
         start_time = datetime.now()
+        drive_url = system_params["drive_url"]
+        root_folder = system_params["root_folder"]
+        threads = system_params["threads"]
+        host_name = system_params["host_name"]
+        client_key = system_params["client_key"]
+        client_secret = system_params["client_secret"]
+        tenant_id = system_params["tenant_id"]
+        scope = system_params["scope"]
 
-        # new_env = self.sudo().env(cr=new_cr)
+        new_cr = self.pool.cursor()
         self = self.with_env(self.env(cr=new_cr))
-        (
-            host_name,
-            client_key,
-            client_secret,
-            tenant_id,
-            _,
-            upload_url,
-            scope,
-            threads,
-            drive_url,
-            root_folder,
-        ) = self.get_system_params()
+
         update_record = {"status": const.RUNNING_STATUS}
         self.update_backup_management(
-            backup_id, update_record
+            new_cr, backup_id, update_record
         )  # update status -> running
 
-        db_name = self.env.cr.dbname
+        # db_name = self.env.cr.dbname
         processes = []
         upload_url = f"{drive_url}/root:/{root_folder}"
-        path_gen = os.path.join(DATA_DIR, "filestore", db_name)
+        # path_gen = os.path.join(DATA_DIR, "filestore", db_name)
         total_success = 0
+
         with ThreadPoolExecutor(max_workers=int(threads)) as executor:
             for id in att_ids:
-                attachment = self.get_attachment_by_id(int(id["id"]))
                 if self.is_valid.is_set():
                     break
                 processes.append(
                     executor.submit(
                         self.handle_request_sharepoint,
-                        attachment.name,
-                        attachment.mimetype,
-                        attachment.create_date,
-                        attachment.res_model,
+                        int(id["id"]),
                         upload_url,
                         host_name,
                         client_key,
@@ -277,9 +243,7 @@ class BackupManagement(models.Model):
                         tenant_id,
                         scope,
                         behavior,
-                        attachment.id,
                         backup_id,
-                        attachment.datas,
                     )
                 )
         for process in as_completed(processes):
@@ -296,43 +260,34 @@ class BackupManagement(models.Model):
                 "total_time": utils.convert_time_measure(total_time),
             }
             self.update_backup_management(
-                backup_id, update_record
+                new_cr, backup_id, update_record
             )  # update status -> finished
+        new_cr.commit()
         new_cr.close()
+
         return True
 
     def get_system_params(self):
-        sys_params = self.env["ir.config_parameter"].sudo()
-        host_name = utils.get_host_name(sys_params.get_param("web.base.url"))
-        client_key = sys_params.get_param("sharepoint.client_key")
-        client_secret = sys_params.get_param("sharepoint.client_secret")
-        tenant_id = sys_params.get_param("sharepoint.tenant_id")
-        upload_url = sys_params.get_param("sharepoint.upload_url")
-        site_url = sys_params.get_param("sharepoint.site_url")
-        scope = sys_params.get_param("sharepoint.scope")
-        threads = sys_params.get_param("sharepoint.threads")
-        drive_url = sys_params.get_param("sharepoint.drive_url")
-        root_folder = sys_params.get_param("sharepoint.root_folder")
-
-        return (
-            host_name,
-            client_key,
-            client_secret,
-            tenant_id,
-            site_url,
-            upload_url,
-            scope,
-            threads,
-            drive_url,
-            root_folder,
-        )
+        config_parameter = self.env["ir.config_parameter"].sudo()
+        system_params = {
+            "host_name": utils.get_host_name(
+                config_parameter.get_param("web.base.url")
+            ),
+            "client_key": config_parameter.get_param("sharepoint.client_key"),
+            "client_secret": config_parameter.get_param("sharepoint.client_secret"),
+            "tenant_id": config_parameter.get_param("sharepoint.tenant_id"),
+            "upload_url": config_parameter.get_param("sharepoint.upload_url"),
+            "site_url": config_parameter.get_param("sharepoint.site_url"),
+            "scope": config_parameter.get_param("sharepoint.scope"),
+            "threads": config_parameter.get_param("sharepoint.threads"),
+            "drive_url": config_parameter.get_param("sharepoint.drive_url"),
+            "root_folder": config_parameter.get_param("sharepoint.root_folder"),
+        }
+        return system_params
 
     def handle_request_sharepoint(
         self,
-        name: str,
-        mimetype,
-        create_date: datetime,
-        res_model: str,
+        id: int,
         upload_url,
         host_name,
         client_key,
@@ -340,9 +295,7 @@ class BackupManagement(models.Model):
         tenant_id,
         scope,
         behavior,
-        attachment_id: int,
         backup_id: str,
-        db_datas,
     ):
 
         if self.is_valid.is_set():
@@ -367,12 +320,24 @@ class BackupManagement(models.Model):
         # else:
         #     file_content = db_datas
         # extension = mimetypes.guess_extension(mimetype)
-        year = utils.get_year(str(create_date))
-        upload_path = f"{upload_url}/{host_name}/{res_model}/{year}/{name}"
+        new_cr = self.pool.cursor()
+        self = self.with_env(self.env(cr=new_cr))
+        attachment = self.get_attachment_by_id(new_cr, id)
+        # attachment.ensure_one()
+        year = utils.get_year(str(attachment.create_date))
+        upload_path = (
+            f"{upload_url}/{host_name}/{attachment.res_model}/{year}/{attachment.name}"
+        )
         _logger.info(f"upload_path: {upload_path}")
 
         sharepoint_res = SharePoint().upload_file_to_sharepoint(
-            upload_path, client_key, client_secret, tenant_id, scope, behavior, db_datas
+            upload_path,
+            client_key,
+            client_secret,
+            tenant_id,
+            scope,
+            behavior,
+            attachment.db_datas,
         )
         download_url = None
         if (
@@ -386,19 +351,20 @@ class BackupManagement(models.Model):
             # self.update_atts(attachment_id, download_url, sharepoint_id)
             # if store_fname:
             #     utils.delete_file(file_path)
-            return True
-
-        self.env["log.backup"].create(
-            {
-                "backup_id": backup_id,
-                "status_code": sharepoint_res.status_code,
-                "message": sharepoint_res.json()["error"]["message"],
-                "log_type": const.SHAREPOINT_TYPE,
-                "url": download_url,
-                "attachment_name": name,
-            }
-        )
-        self.env.cr.commit()
+        else:
+            self.env["log.backup"].create(
+                {
+                    "backup_id": backup_id,
+                    "status_code": sharepoint_res.status_code,
+                    "message": sharepoint_res.json()["error"]["message"],
+                    "log_type": const.SHAREPOINT_TYPE,
+                    "url": download_url,
+                    "attachment_name": attachment.name,
+                }
+            )
+        new_cr.commit()
+        new_cr.close()
+        return True
 
     def open_log_wizard(self):
         return {
@@ -423,13 +389,8 @@ class BackupManagement(models.Model):
         _logger.info(f"length of attachments: {len(attachments)}")
         if len(attachments) == 0:
             raise UserError("No attachments found")
+
         vals["total_files"] = len(attachments)
-        # size_bytes = 0
-        # for idx in attachments:
-        #     if idx["file_size"]:
-        #         size_bytes += int(idx["file_size"])
-        # res = utils.convert_bytes_to_gb(size_bytes)
-        # vals["total_size"] = res
         if vals["executed_at"] != "":
             new_time = current_time + timedelta(seconds=3)
             new_time = new_time.replace(microsecond=0)
@@ -440,11 +401,14 @@ class BackupManagement(models.Model):
         vals["cron_id"] = str(uuid.uuid4())
         res = super(BackupManagement, self).create(vals)
         executed_at = datetime.strptime(vals["executed_at"], "%Y-%m-%d %H:%M:%S")
+        system_params = self.get_system_params()
+
         self.add_cron(
             executed_at,
             attachments,
             res.id,
             vals["cron_id"],
             vals["conflict_behavior"],
+            system_params,
         )
         return res
