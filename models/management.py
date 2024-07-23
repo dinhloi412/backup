@@ -266,12 +266,10 @@ class BackupManagement(models.Model):
                 processes.append(
                     executor.submit(
                         self.handle_request_sharepoint,
-                        path_gen,
-                        attachment["store_fname"],
-                        attachment["name"],
-                        attachment["mimetype"],
-                        attachment["create_date"],
-                        attachment["res_model"],
+                        attachment.name,
+                        attachment.mimetype,
+                        attachment.create_date,
+                        attachment.res_model,
                         upload_url,
                         host_name,
                         client_key,
@@ -279,10 +277,9 @@ class BackupManagement(models.Model):
                         tenant_id,
                         scope,
                         behavior,
-                        attachment["id"],
+                        attachment.id,
                         backup_id,
-                        attachment["db_datas"],
-                        attachment["checksum"],
+                        attachment.datas,
                     )
                 )
         for process in as_completed(processes):
@@ -332,8 +329,6 @@ class BackupManagement(models.Model):
 
     def handle_request_sharepoint(
         self,
-        path_gen: str,
-        store_fname: str,
         name: str,
         mimetype,
         create_date: datetime,
@@ -348,45 +343,36 @@ class BackupManagement(models.Model):
         attachment_id: int,
         backup_id: str,
         db_datas,
-        checksum: str,
     ):
 
         if self.is_valid.is_set():
             return
-        file_content = None
-        file_path = None
-
-        if store_fname:
-            file_path = os.path.join(path_gen, store_fname)
-            file_content = utils.read_file(file_path)
-            if not file_content:
-                atts = self.env[const.ATTACHMENT_MODEL].search(
-                    [
-                        ("checksum", "=", checksum),
-                        ("type", "=", const.ATTACHMENT_URL_TYPE),
-                    ]
-                )
-                _logger.info(f"atts, {atts}")
-                # self.update_atts(
-                #     attachment_id, atts[0]["url"], atts[0]["sharepoint_id"]
-                # )
-                return True
-        else:
-            file_content = db_datas
+        # file_content = None
+        # file_path = None
+        # if store_fname:
+        #     file_path = os.path.join(path_gen, store_fname)
+        #     file_content = utils.read_file(file_path)
+        #     if not file_content:
+        #         atts = self.env[const.ATTACHMENT_MODEL].search(
+        #             [
+        #                 ("checksum", "=", checksum),
+        #                 ("type", "=", const.ATTACHMENT_URL_TYPE),
+        #             ]
+        #         )
+        #         _logger.info(f"atts, {atts}")
+        #         # self.update_atts(
+        #         #     attachment_id, atts[0]["url"], atts[0]["sharepoint_id"]
+        #         # )
+        #         return True
+        # else:
+        #     file_content = db_datas
         # extension = mimetypes.guess_extension(mimetype)
         year = utils.get_year(str(create_date))
         upload_path = f"{upload_url}/{host_name}/{res_model}/{year}/{name}"
         _logger.info(f"upload_path: {upload_path}")
 
         sharepoint_res = SharePoint().upload_file_to_sharepoint(
-            upload_path,
-            file_path,
-            client_key,
-            client_secret,
-            tenant_id,
-            scope,
-            behavior,
-            file_content,
+            upload_path, client_key, client_secret, tenant_id, scope, behavior, db_datas
         )
         download_url = None
         if (

@@ -38,7 +38,6 @@ class SharePoint:
     def upload_file_to_sharepoint(
         self,
         upload_path,
-        file_path,
         client_key: str,
         client_secret: str,
         tenant_id: str,

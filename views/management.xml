@@ -21,7 +21,7 @@
                 <field name="to_date" />
                 <field name="is_scheduled" />
                 <field name="executed_at" />
-                <field name="total_size" />
+                <!-- <field name="total_size" /> -->
                 <field name="total_files" />
                 <field name="total_success" />
                 <field name="total_time" />
