@@ -62,7 +62,8 @@ class SharePoint:
             _logger.info(f"{response} : response upload")
             return response
         except Exception as e:
-            raise Exception(e)
+            _logger.error(f"error uploading file in sharepoint: {e}")
+            # raise Exception(e)
 
     def remove_file_sharepoint(
         self, sharepoint_id: str, drive_url, client_key, client_secret, tenant_id, scope
@@ -83,6 +84,7 @@ class SharePoint:
             response = requests.delete(url=res_url, headers=headers)
             return response
         except Exception as e:
+            _logger.error(f"error remove file in sharepoint: {e}")
             raise Exception(e)
 
     def conflict_behavior(self, state: str):

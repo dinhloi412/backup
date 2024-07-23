@@ -107,8 +107,13 @@ class BackupManagement(models.Model):
             return True
         return False
 
-    def action_cancel_cron(self):
+    def action_cancel(self):
         for record in self:
+            if (
+                record.status == const.CANCELED_STATUS
+                or record.status == const.DONE_STATUS
+            ):
+                raise ValidationError("cannot cancel this record")
             if record.scheduler.get_job(record.cron_id) is not None:
                 record.scheduler.remove_job(record.cron_id)
             record.status = const.CANCELED_STATUS
@@ -321,10 +326,8 @@ class BackupManagement(models.Model):
         #     file_content = db_datas
         # extension = mimetypes.guess_extension(mimetype)
         with self.pool.cursor() as new_cr:
-            # new_cr = self.pool.cursor()
             self = self.with_env(self.env(cr=new_cr))
             attachment = self.sudo().get_attachment_by_id(new_cr, id)
-            # attachment.ensure_one()
             year = utils.get_year(str(attachment.create_date))
             upload_path = f"{upload_url}/{host_name}/{attachment.res_model}/{year}/{attachment.name}"
             _logger.info(f"upload_path: {upload_path}")

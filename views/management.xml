@@ -13,7 +13,7 @@
                 <header>
                     <!-- <button name="action_migrate" string="Migrate" type="object"
                         class="btn btn-warning" /> -->
-                    <button name="action_cancel_cron" string="Cancel Backup" class="btn btn-danger"
+                    <button name="action_cancel" string="Cancel Backup" class="btn btn-danger"
                         type="object" />
                 </header>
                 <field name="name" />
@@ -42,14 +42,13 @@
                 <header>
                     <field name="status" widget="statusbar" nolabel="1"
                         statusbar_visible="created,running,done,cancelled" />
-                    <button name="action_cancel_cron" string="Cancel Backup" class="oe_highlight"
-                        confirm="Cancel this item?"
-                        attrs="{'invisible': ['&amp;',('status', '!=', 'created'),('status', '!=', 'running')]}"
-                        type="object" />
                     <!-- <button name="action_migrate" string="Migrate" type="object"
                         class="btn btn-primary" /> -->
                     <button name="open_log_wizard" string="Open log" type="object"
                         class="btn btn-secondary" />
+                    <button name="action_cancel" string="Cancel Backup" class="btn btn-danger"
+                        attrs="{'invisible': [('status', 'in', ['cancelled', 'done'])]}"
+                        type="object" />
                 </header>
                 <sheet>
                     <group>
