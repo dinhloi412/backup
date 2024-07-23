@@ -138,7 +138,10 @@ class BackupManagement(models.Model):
 
     def get_attachment_by_id(self, new_cr, id: int):
         attachment = (
-            self.env[const.ATTACHMENT_MODEL].browse(id).with_env(self.env(cr=new_cr))
+            self.sudo()
+            .env[const.ATTACHMENT_MODEL]
+            .browse(id)
+            .with_env(self.env(cr=new_cr))
         )
         if not attachment:
             _logger.warning(f"Attachment with ID {id} not found")
