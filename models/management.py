@@ -322,8 +322,8 @@ class BackupManagement(models.Model):
         # extension = mimetypes.guess_extension(mimetype)
         with self.pool.cursor() as new_cr:
             # new_cr = self.pool.cursor()
-            self = self.sudo().with_env(self.env(cr=new_cr))
-            attachment = self.get_attachment_by_id(new_cr, id)
+            self = self.with_env(self.env(cr=new_cr))
+            attachment = self.sudo().get_attachment_by_id(new_cr, id)
             # attachment.ensure_one()
             year = utils.get_year(str(attachment.create_date))
             upload_path = f"{upload_url}/{host_name}/{attachment.res_model}/{year}/{attachment.name}"
