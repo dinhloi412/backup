@@ -138,10 +138,7 @@ class BackupManagement(models.Model):
 
     def get_attachment_by_id(self, new_cr, id: int):
         attachment = (
-            self.sudo()
-            .env[const.ATTACHMENT_MODEL]
-            .browse(id)
-            .with_env(self.env(cr=new_cr))
+            self.env[const.ATTACHMENT_MODEL].browse(id).with_env(self.env(cr=new_cr))
         )
         if not attachment:
             _logger.warning(f"Attachment with ID {id} not found")
@@ -325,7 +322,7 @@ class BackupManagement(models.Model):
         # extension = mimetypes.guess_extension(mimetype)
         with self.pool.cursor() as new_cr:
             # new_cr = self.pool.cursor()
-            self = self.with_env(self.env(cr=new_cr))
+            self = self.sudo().with_env(self.env(cr=new_cr))
             attachment = self.get_attachment_by_id(new_cr, id)
             # attachment.ensure_one()
             year = utils.get_year(str(attachment.create_date))
