@@ -39,8 +39,8 @@ class IrAttachment(models.Model):
                 system_params["scope"],
             )
         return super(IrAttachment, self).unlink()
-
-
+    
+    
 class ModelAttachment(models.Model):
     _name = "ir.model.attachment"
     _description = "Model attachment"
@@ -298,7 +298,8 @@ class BackupManagement(models.Model):
     ):
         if self.is_valid.is_set():
             return
-
+        # self = None
+        attachment = None
         try:
             with self.pool.cursor() as new_cr:
                 self = self.with_env(self.env(cr=new_cr))
@@ -364,8 +365,9 @@ class BackupManagement(models.Model):
                 str(e),
                 id,
                 str(datetime.now()),
-            )   
-            self.message_post(body=body)
+            ) 
+            # data = self.env["backup.management"].browse(backup_id) 
+            attachment.message_post(body=body)
             return False
 
     def open_log_wizard(self):
