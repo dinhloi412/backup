@@ -346,6 +346,7 @@ class BackupManagement(models.Model):
                 else:
                     valid = False
             if not sharepoint_res or not valid:
+                valid = False
                 status_code = None
                 message = "cannot request to sharepoint"
                 if sharepoint_res:
