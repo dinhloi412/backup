@@ -306,7 +306,7 @@ class BackupManagement(models.Model):
             year = utils.get_year(str(attachment.create_date))
             upload_path = f"{upload_url}/{host_name}/{attachment.res_model}/{year}/{attachment.name}"
             _logger.info(f"upload_path: {upload_path}")
-            valid = False
+            valid = True
             sharepoint_res = SharePoint().upload_file_to_sharepoint(
                 upload_path,
                 client_key,
@@ -318,39 +318,41 @@ class BackupManagement(models.Model):
             )
 
             download_url = None
-            if sharepoint_res and sharepoint_res.status_code == http.HTTPStatus.OK or sharepoint_res.status_code == http.HTTPStatus.CREATED:
-                valid = True
-                json_data = sharepoint_res.json()
-                download_url = json_data["@microsoft.graph.downloadUrl"]
-                sharepoint_id = json_data["id"]
-                _logger.info(f"sharepoint_id: {sharepoint_id}")
+            if sharepoint_res:
+                if sharepoint_res.status_code == http.HTTPStatus.OK or sharepoint_res.status_code == http.HTTPStatus.CREATED:
+                    valid = True
+                    json_data = sharepoint_res.json()
+                    download_url = json_data["@microsoft.graph.downloadUrl"]
+                    sharepoint_id = json_data["id"]
+                    _logger.info(f"sharepoint_id: {sharepoint_id}")
 
-                # if attachment.store_fname:
-                #     db_name = self.env.cr.dbname
-                #     path_gen = os.path.join(DATA_DIR, "filestore", db_name)
-                #     file_path = os.path.join(path_gen, attachment.store_fname)
-                #     _logger.info(file_path)
-                #     utils.delete_file(file_path)
-                    
-                # attachment.write({
-                #     "url" : download_url,
-                #     "sharepoint_id" : sharepoint_id,
-                #     "type": const.ATTACHMENT_URL_TYPE,
-                #     "db_datas": False,
-                #     "store_fname": False
-                # })
-            else:
-                valid = False
+                    # if attachment.store_fname:
+                    #     db_name = self.env.cr.dbname
+                    #     path_gen = os.path.join(DATA_DIR, "filestore", db_name)
+                    #     file_path = os.path.join(path_gen, attachment.store_fname)
+                    #     _logger.info(file_path)
+                    #     utils.delete_file(file_path)
+                        
+                    # attachment.write({
+                    #     "url" : download_url,
+                    #     "sharepoint_id" : sharepoint_id,
+                    #     "type": const.ATTACHMENT_URL_TYPE,
+                    #     "db_datas": False,
+                    #     "store_fname": False
+                    # })
+                else:
+                    valid = False
+            if not sharepoint_res or not valid:
                 self.env["log.backup"].create(
-                    {
-                        "backup_id": backup_id,
-                        "status_code": sharepoint_res.status_code or None,
-                        "message": sharepoint_res.json()["error"]["message"] or "cannot request to sharepoint",
-                        "log_type": const.SHAREPOINT_TYPE,
-                        "url": download_url,
-                        "attachment_name": attachment.name,
-                    }
-                )
+                        {
+                            "backup_id": backup_id,
+                            "status_code": sharepoint_res.status_code or None,
+                            "message": sharepoint_res.json()["error"]["message"] or "cannot request to sharepoint",
+                            "log_type": const.SHAREPOINT_TYPE,
+                            "url": download_url,
+                            "attachment_name": attachment.name,
+                        }
+                    )
             new_cr.commit()
         return valid
 
