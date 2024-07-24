@@ -318,13 +318,10 @@ class BackupManagement(models.Model):
                 behavior,
                 attachment.datas,
             )
-            if not sharepoint_res:
-                valid = False
             download_url = None
-            if (
-                sharepoint_res.status_code == http.HTTPStatus.OK
-                or sharepoint_res.status_code == http.HTTPStatus.CREATED
-            ):
+            if not sharepoint_res:
+                valid = False  
+            elif sharepoint_res.status_code == http.HTTPStatus.OK or sharepoint_res.status_code == http.HTTPStatus.CREATED:
                 json_data = sharepoint_res.json()
                 download_url = json_data["@microsoft.graph.downloadUrl"]
                 sharepoint_id = json_data["id"]
