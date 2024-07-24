@@ -61,7 +61,7 @@ class SharePoint:
             # Make the request to upload the file
             data_to_send = base64.b64decode(file_content)
 
-            response = requests.put(res_url, data=data_to_send, headers=headers)
+            response = requests.put(res_url, data=data_to_send, headers=headers, timeout=30)
             _logger.info(f"{response} : response upload")
             return response
         except Exception as e:
