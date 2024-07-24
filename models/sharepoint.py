@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 import odoo
+import base64
 from http import HTTPStatus
 
 
@@ -58,7 +59,9 @@ class SharePoint:
             }
 
             # Make the request to upload the file
-            response = requests.put(res_url, data=file_content, headers=headers)
+            data_to_send = base64.b64decode(file_content)
+
+            response = requests.put(res_url, data=data_to_send, headers=headers)
             _logger.info(f"{response} : response upload")
             return response
         except Exception as e:

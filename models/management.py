@@ -58,10 +58,6 @@ class BackupManagement(models.Model):
     _inherit = ["mail.thread"]
 
     scheduler = BackgroundScheduler()
-    year_selection = []
-    current_year = datetime.now().year
-    for year in range(current_year - 10, current_year + 1):
-        year_selection.append((str(year), str(year)))
 
     name = fields.Char(string="Name", required=True)
     from_date = fields.Datetime(string="From Date", required=True)
@@ -85,9 +81,7 @@ class BackupManagement(models.Model):
         default="created",
     )
     cron_id = fields.Char(string="Cron ID")
-
     model_ids = fields.Many2many("ir.model", string="Model name")
-
     conflict_behavior = fields.Selection(
         selection=[("fail", "Fail"), ("replace", "Replace"), ("rename", "Rename")],
         string="Conflict Behavior",
@@ -302,36 +296,18 @@ class BackupManagement(models.Model):
         behavior,
         backup_id: str,
     ):
-
         if self.is_valid.is_set():
             return
-        # file_content = None
-        # file_path = None
-        # if store_fname:
-        #     file_path = os.path.join(path_gen, store_fname)
-        #     file_content = utils.read_file(file_path)
-        #     if not file_content:
-        #         atts = self.env[const.ATTACHMENT_MODEL].search(
-        #             [
-        #                 ("checksum", "=", checksum),
-        #                 ("type", "=", const.ATTACHMENT_URL_TYPE),
-        #             ]
-        #         )
-        #         _logger.info(f"atts, {atts}")
-        #         # self.update_atts(
-        #         #     attachment_id, atts[0]["url"], atts[0]["sharepoint_id"]
-        #         # )
-        #         return True
-        # else:
-        #     file_content = db_datas
-        # extension = mimetypes.guess_extension(mimetype)
+
+       
+
         with self.pool.cursor() as new_cr:
             self = self.with_env(self.env(cr=new_cr))
             attachment = self.sudo().get_attachment_by_id(new_cr, id)
             year = utils.get_year(str(attachment.create_date))
             upload_path = f"{upload_url}/{host_name}/{attachment.res_model}/{year}/{attachment.name}"
             _logger.info(f"upload_path: {upload_path}")
-
+            valid = True
             sharepoint_res = SharePoint().upload_file_to_sharepoint(
                 upload_path,
                 client_key,
@@ -339,8 +315,11 @@ class BackupManagement(models.Model):
                 tenant_id,
                 scope,
                 behavior,
-                attachment.db_datas,
+                attachment.datas,
             )
+            if not sharepoint_res:
+                _logger.info(f"sharepoint_res: {sharepoint_res}")
+                valid = False
             download_url = None
             if (
                 sharepoint_res.status_code == http.HTTPStatus.OK
@@ -350,10 +329,27 @@ class BackupManagement(models.Model):
                 download_url = json_data["@microsoft.graph.downloadUrl"]
                 sharepoint_id = json_data["id"]
                 _logger.info(f"sharepoint_id: {sharepoint_id}")
+
+                if attachment.store_fname:
+                    db_name = self.env.cr.dbname
+                    path_gen = os.path.join(DATA_DIR, "filestore", db_name)
+                    file_path = os.path.join(path_gen, attachment.store_fname)
+                    _logger.info(file_path)
+                    utils.delete_file(file_path)
+                    
+                attachment.write({
+                    "url" : download_url,
+                    "sharepoint_id" : sharepoint_id,
+                    "type": const.ATTACHMENT_URL_TYPE,
+                    "db_datas": False,
+                    "store_fname": False
+                })
+                
                 # self.update_atts(attachment_id, download_url, sharepoint_id)
                 # if store_fname:
                 #     utils.delete_file(file_path)
             else:
+                valid = False
                 self.env["log.backup"].create(
                     {
                         "backup_id": backup_id,
@@ -365,7 +361,7 @@ class BackupManagement(models.Model):
                     }
                 )
             new_cr.commit()
-        return True
+        return valid
 
     def open_log_wizard(self):
         return {
@@ -392,16 +388,14 @@ class BackupManagement(models.Model):
             raise UserError("No attachments found")
 
         vals["total_files"] = len(attachments)
-        if vals["executed_at"] != "":
+        if not vals["executed_at"]:
             new_time = current_time + timedelta(seconds=3)
             new_time = new_time.replace(microsecond=0)
             vals["executed_at"] = str(new_time)
-        if vals["executed_at"] == "":
-            raise UserError("executed_at cannot be empty")
 
         vals["cron_id"] = str(uuid.uuid4())
         res = super(BackupManagement, self).create(vals)
-        executed_at = datetime.strptime(vals["executed_at"], "%Y-%m-%d %H:%M:%S")
+        executed_at = datetime.strptime(str(vals["executed_at"]), "%Y-%m-%d %H:%M:%S")
         system_params = self.get_system_params()
 
         self.add_cron(

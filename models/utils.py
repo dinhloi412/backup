@@ -1,17 +1,8 @@
 import os
 from datetime import datetime
+import logging
 
-
-# def convert_time(from_year: str, to_year: str):
-#     try:
-#         from_year = int(from_year)
-#         to_year = int(to_year)
-#         from_start_date = datetime(from_year, 1, 1).strftime("%Y-%m-%d")
-#         from_end_date = datetime(to_year, 12, 31).strftime("%Y-%m-%d")
-#         return from_start_date, from_end_date
-#     except Exception as e:
-#         raise Exception(e)
-
+_logger = logging.getLogger(__name__)
 
 def get_year(timestamp: str):
     res = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
@@ -28,7 +19,7 @@ def delete_file(file_path: str):
         if os.path.exists(file_path):
             os.remove(file_path)
     except FileNotFoundError:
-        raise Exception(f"File '{file_path}' not found.")
+        _logger.error(f"cannot delete file '{file_path}")
 
 
 def read_file(file_path: str):
@@ -39,7 +30,7 @@ def read_file(file_path: str):
                 file_content = file.read()
         return file_content
     except Exception as e:
-        raise Exception(f"cannot read file '{file_path}: ", {e})
+        _logger.error(f"cannot read file '{file_path}: ", {e})
 
 
 def get_host_name(url: str):
