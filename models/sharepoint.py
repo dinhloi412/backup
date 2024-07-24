@@ -66,7 +66,7 @@ class SharePoint:
             return response
         except Exception as e:
             _logger.error(f"error uploading file in sharepoint: {e}")
-            # raise Exception(e)
+            raise Exception(e)
 
     def remove_file_sharepoint(
         self, sharepoint_id: str, drive_url, client_key, client_secret, tenant_id, scope

@@ -11,3 +11,6 @@ DB_TYPE = "database"
 EXCEPT_EXTENSION = ["application/x-msdownload", "application/javascript"]
 ATTACHMENT_URL_TYPE = "url"
 ATTACHMENT_BINAYRY_TYPE = "binary"
+
+
+DANGER_MESSAGE = "danger"

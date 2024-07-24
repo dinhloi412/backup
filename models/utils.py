@@ -1,6 +1,8 @@
 import os
-from datetime import datetime
 import logging
+
+from datetime import datetime
+from . import constants
 
 _logger = logging.getLogger(__name__)
 
@@ -52,3 +54,14 @@ def convert_time_measure(t: datetime):
 def convert_query_db(data: list):
     res = ", ".join(["'%s'" % name for name in data])
     return res
+
+def generate_log(status: str, message: str, attachment_id: str, time: str):
+    text_color_class = "success" if status == constants.DONE_STATUS else "danger"
+    body = f"""
+                   <ul class="text-{text_color_class}">
+                       <li><b>Attachment id:</b> {attachment_id}</li>
+                       <li><b>Message:</b> {message}</li>    
+                       <li><b>Time:</b> {time}</li>                  
+                   </ul>
+                   """
+    return body
