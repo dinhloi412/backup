@@ -55,7 +55,7 @@ class SharePoint:
 
             headers = {
                 "Authorization": f"Bearer {self.token}",
-                "Content-Type": "text/plain",
+                # "Content-Type": "text/plain",  # mabe cannot set
             }
 
             # Make the request to upload the file

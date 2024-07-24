@@ -319,7 +319,10 @@ class BackupManagement(models.Model):
 
             download_url = None
             if sharepoint_res:
-                if sharepoint_res.status_code == http.HTTPStatus.OK or sharepoint_res.status_code == http.HTTPStatus.CREATED:
+                if (
+                    sharepoint_res.status_code == http.HTTPStatus.OK
+                    or sharepoint_res.status_code == http.HTTPStatus.CREATED
+                ):
                     valid = True
                     json_data = sharepoint_res.json()
                     download_url = json_data["@microsoft.graph.downloadUrl"]
@@ -332,7 +335,7 @@ class BackupManagement(models.Model):
                     #     file_path = os.path.join(path_gen, attachment.store_fname)
                     #     _logger.info(file_path)
                     #     utils.delete_file(file_path)
-                        
+
                     # attachment.write({
                     #     "url" : download_url,
                     #     "sharepoint_id" : sharepoint_id,
@@ -343,16 +346,21 @@ class BackupManagement(models.Model):
                 else:
                     valid = False
             if not sharepoint_res or not valid:
+                status_code = None
+                message = "cannot request to sharepoint"
+                if sharepoint_res:
+                    status_code = sharepoint_res.status_code
+                    message = sharepoint_res.json()["error"]["message"]
                 self.env["log.backup"].create(
-                        {
-                            "backup_id": backup_id,
-                            "status_code": sharepoint_res.status_code or None,
-                            "message": sharepoint_res.json()["error"]["message"] or "cannot request to sharepoint",
-                            "log_type": const.SHAREPOINT_TYPE,
-                            "url": download_url,
-                            "attachment_name": attachment.name,
-                        }
-                    )
+                    {
+                        "backup_id": backup_id,
+                        "status_code": status_code,
+                        "message": message,
+                        "log_type": const.SHAREPOINT_TYPE,
+                        "url": download_url,
+                        "attachment_name": attachment.name,
+                    }
+                )
             new_cr.commit()
         return valid
 
