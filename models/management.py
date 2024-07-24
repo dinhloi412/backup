@@ -304,6 +304,7 @@ class BackupManagement(models.Model):
         with self.pool.cursor() as new_cr:
             self = self.with_env(self.env(cr=new_cr))
             attachment = self.sudo().get_attachment_by_id(new_cr, id)
+            _logger.info("attachment_id: %s", attachment.id)
             year = utils.get_year(str(attachment.create_date))
             upload_path = f"{upload_url}/{host_name}/{attachment.res_model}/{year}/{attachment.name}"
             _logger.info(f"upload_path: {upload_path}")
@@ -318,7 +319,6 @@ class BackupManagement(models.Model):
                 attachment.datas,
             )
             if not sharepoint_res:
-                _logger.info(f"sharepoint_res: {sharepoint_res}")
                 valid = False
             download_url = None
             if (
@@ -337,13 +337,13 @@ class BackupManagement(models.Model):
                     _logger.info(file_path)
                     utils.delete_file(file_path)
                     
-                attachment.write({
-                    "url" : download_url,
-                    "sharepoint_id" : sharepoint_id,
-                    "type": const.ATTACHMENT_URL_TYPE,
-                    "db_datas": False,
-                    "store_fname": False
-                })
+                # attachment.write({
+                #     "url" : download_url,
+                #     "sharepoint_id" : sharepoint_id,
+                #     "type": const.ATTACHMENT_URL_TYPE,
+                #     "db_datas": False,
+                #     "store_fname": False
+                # })
                 
                 # self.update_atts(attachment_id, download_url, sharepoint_id)
                 # if store_fname:
