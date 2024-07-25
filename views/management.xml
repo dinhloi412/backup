@@ -17,6 +17,7 @@
                         type="object" />
                 </header>
                 <field name="name" />
+                <field name="model_ids" />
                 <field name="from_date" />
                 <field name="to_date" />
                 <field name="is_scheduled" />
