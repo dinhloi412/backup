@@ -86,6 +86,7 @@ class BackupManagement(models.Model):
                 record.scheduler.remove_job(record.cron_id)
             record.status = const.CANCELED_STATUS
         self.is_valid.set()
+        _logger.warn(f"cancelled job with id {self.id}")
         return True
 
     def get_attachments(self, start_date: str, end_date: str, model_ids: list):
