@@ -12,5 +12,6 @@ class LogManagement(models.Model):
     message = fields.Text(string='Message')
     attachment_id = fields.Char(string="Attachment ID")
     attachment_name = fields.Char(string='Attachment name')
+    attachment_size = fields.Integer(string='Attachment size')
     log_type = fields.Char(string='Log type')
     url = fields.Char(string='URL')

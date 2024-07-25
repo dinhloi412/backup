@@ -279,6 +279,7 @@ class BackupManagement(models.Model):
                         "url": download_url,
                         "attachment_id": attachment.id,
                         "attachment_name": attachment.name,
+                        "attachment_size": attachment.file_size
                     }
                 )
             new_cr.commit()
