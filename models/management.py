@@ -196,6 +196,8 @@ class BackupManagement(models.Model):
                 "total_time": utils.convert_time_measure(total_time),
             }
             self.update_backup_management(new_cr, backup_id, update_record)  # update status -> finished
+        else:
+            self.is_valid.clear()
         new_cr.commit()
         new_cr.close()
 
