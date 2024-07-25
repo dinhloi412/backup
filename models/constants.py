@@ -8,7 +8,7 @@ MAX_THREADS = 10
 SHAREPOINT_TYPE = "sharepoint"
 DB_TYPE = "database"
 
-EXCEPT_EXTENSION = ["application/x-msdownload", "application/javascript"]
+EXCEPT_EXTENSION = ["application/x-msdownload", "application/javascript", "application/octet-stream"]
 ATTACHMENT_URL_TYPE = "url"
 ATTACHMENT_BINAYRY_TYPE = "binary"
 

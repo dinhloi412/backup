@@ -41,11 +41,11 @@ class SharePoint:
             # Make the request to upload the file
             data_to_send = base64.b64decode(file_content)
 
-            response = requests.put(res_url, data=data_to_send, headers=headers, timeout=30)
+            response = requests.put(res_url, data=data_to_send, headers=headers, timeout=70)
             _logger.info(f"{response} : response upload")
             return response
         except Exception as e:
-            _logger.error(f"error uploading file in sharepoint: {e}")
+            _logger.error(f"error uploading file to sharepoint: {e}")
             # raise Exception(e)
 
     def remove_file_sharepoint(self, sharepoint_id: str, drive_url, client_key, client_secret, tenant_id, scope):
@@ -59,7 +59,7 @@ class SharePoint:
             response = requests.delete(url=res_url, headers=headers)
             return response
         except Exception as e:
-            _logger.error(f"error remove file in sharepoint: {e}")
+            _logger.error(f"error remove file to sharepoint: {e}")
 
     def get_file(self, sharepoint_id: str, drive_url, client_key, client_secret, tenant_id, scope):
         try:
