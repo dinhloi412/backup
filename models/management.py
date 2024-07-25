@@ -4,6 +4,7 @@ import uuid
 import threading
 import logging
 import odoo
+import os
 
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -248,22 +249,22 @@ class BackupManagement(models.Model):
                     sharepoint_id = json_data["id"]
                     _logger.info(f"sharepoint_id: {sharepoint_id}")
 
-                    # if attachment.store_fname:
-                    #     db_name = self.env.cr.dbname
-                    #     path_gen = os.path.join(DATA_DIR, "filestore", db_name)
-                    #     file_path = os.path.join(path_gen, attachment.store_fname)
-                    #     _logger.info(file_path)
-                    #     utils.delete_file(file_path)
+                    if attachment.store_fname:
+                        db_name = self.env.cr.dbname
+                        path_gen = os.path.join(DATA_DIR, "filestore", db_name)
+                        file_path = os.path.join(path_gen, attachment.store_fname)
+                        _logger.info(file_path)
+                        utils.delete_file(file_path)
 
-                    # attachment.write(
-                    #     {
-                    #         "url": download_url,
-                    #         "sharepoint_id": sharepoint_id,
-                    #         "type": const.ATTACHMENT_URL_TYPE,
-                    #         "db_datas": False,
-                    #         "store_fname": False,
-                    #     }
-                    # )
+                    attachment.write(
+                        {
+                            "url": download_url,
+                            "sharepoint_id": sharepoint_id,
+                            "type": const.ATTACHMENT_URL_TYPE,
+                            "db_datas": False,
+                            "store_fname": False,
+                        }
+                    )
                 else:
                     valid = False
             if not sharepoint_res or not valid:
