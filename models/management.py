@@ -1,13 +1,10 @@
 import http
-import os
 import mimetypes
 import uuid
 import threading
 import logging
 import odoo
-import base64
 
-from odoo.http import request
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from odoo import fields, models, api
@@ -21,47 +18,6 @@ from . import constants as const
 DATA_DIR = odoo.tools.config["data_dir"]
 
 _logger = logging.getLogger(__name__)
-
-
-class Http(models.AbstractModel):
-    _inherit = "ir.http"
-
-    @api.model
-    def _get_content_common(self, xmlid=None, model='ir.attachment', res_id=None, field='datas', unique=None,
-                            filename=None, filename_field='name', download=None, mimetype=None,
-                            access_token=None, token=None):
-        status, headers, content = self.binary_content(
-            xmlid=xmlid, model=model, id=res_id, field=field, unique=unique, filename=filename,
-            filename_field=filename_field, download=download, mimetype=mimetype, access_token=access_token
-        )
-        print("just inherited")
-
-        if status != 200:
-            return self._response_by_status(status, headers, content)
-        else:
-            content_base64 = base64.b64decode(content)
-            headers.append(('Content-Length', len(content_base64)))
-            response = request.make_response(content_base64, headers)
-        return response
-
-
-class IrAttachment(models.Model):
-    _inherit = "ir.attachment"
-    url = fields.Char("url", index=True, size=2048)
-    sharepoint_id = fields.Char("sharepoint_id")
-
-    def unlink(self):
-        system_params = BackupManagement.get_system_params(self)
-        if self.sharepoint_id:
-            SharePoint().remove_file_sharepoint(
-                self.sharepoint_id,
-                system_params["drive_url"],
-                system_params["client_key"],
-                system_params["client_secret"],
-                system_params["tenant_id"],
-                system_params["scope"],
-            )
-        return super(IrAttachment, self).unlink()
 
 
 class ModelAttachment(models.Model):
@@ -289,28 +245,28 @@ class BackupManagement(models.Model):
                     sharepoint_id = json_data["id"]
                     _logger.info(f"sharepoint_id: {sharepoint_id}")
 
-                    if attachment.store_fname:
-                        db_name = self.env.cr.dbname
-                        path_gen = os.path.join(DATA_DIR, "filestore", db_name)
-                        file_path = os.path.join(path_gen, attachment.store_fname)
-                        _logger.info(file_path)
-                        utils.delete_file(file_path)
+                    # if attachment.store_fname:
+                    #     db_name = self.env.cr.dbname
+                    #     path_gen = os.path.join(DATA_DIR, "filestore", db_name)
+                    #     file_path = os.path.join(path_gen, attachment.store_fname)
+                    #     _logger.info(file_path)
+                    #     utils.delete_file(file_path)
 
-                    attachment.write(
-                        {
-                            "url": download_url,
-                            "sharepoint_id": sharepoint_id,
-                            "type": const.ATTACHMENT_URL_TYPE,
-                            "db_datas": False,
-                            "store_fname": False,
-                        }
-                    )
+                    # attachment.write(
+                    #     {
+                    #         "url": download_url,
+                    #         "sharepoint_id": sharepoint_id,
+                    #         "type": const.ATTACHMENT_URL_TYPE,
+                    #         "db_datas": False,
+                    #         "store_fname": False,
+                    #     }
+                    # )
                 else:
                     valid = False
             if not sharepoint_res or not valid:
                 valid = False
                 status_code = None
-                message = "cannot request to sharepoint"
+                message = "ERR_CONNECTION_TIMED_OUT..."
                 if sharepoint_res:
                     status_code = sharepoint_res.status_code
                     message = sharepoint_res.json()["error"]["message"]
