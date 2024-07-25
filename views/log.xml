@@ -6,12 +6,13 @@
             <field name="model">log.backup</field>
             <field name="arch" type="xml">
                 <tree>
-                    <field name="attachment_name"/>
-                    <field name="log_type"/>
-                    <field name="message"/>
-                    <field name="status_code"/>
-                    <field name="url"/>
-                    <field name="create_date"/>
+                    <field name="attachment_id" />
+                    <field name="attachment_name" />
+                    <field name="log_type" />
+                    <field name="message" />
+                    <field name="status_code" />
+                    <field name="url" />
+                    <field name="create_date" />
 
                 </tree>
             </field>
