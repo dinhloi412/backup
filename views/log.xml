@@ -8,6 +8,7 @@
                 <tree>
                     <field name="attachment_id" />
                     <field name="attachment_name" />
+                    <field name="attachment_size" />
                     <field name="log_type" />
                     <field name="message" />
                     <field name="status_code" />
